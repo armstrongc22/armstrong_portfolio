@@ -11,7 +11,7 @@ h3
 pgeocode
 requests
 scikit-learn
-prince-ca
+prince
 confluent-kafka
 google-cloud-bigquery
 google-auth
