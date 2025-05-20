@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 from nba_api.stats.static import players
 from pathlib import Path
+
 @st.cache_data
 def load_leaderboard(path: str = 'leaderboard.csv') -> pd.DataFrame:
     df = pd.read_csv(path)
