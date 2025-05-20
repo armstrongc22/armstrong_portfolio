@@ -1,5 +1,6 @@
 confluent-kafka
 folium
+geopandas
 google-auth
 google-cloud-bigquery
 h3
