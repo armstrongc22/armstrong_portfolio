@@ -11,7 +11,7 @@ def load_leaderboard():
     path = base / "leaderboard.csv"             # adjust filename if needed
 
     # 2) actually read it
-    df = pd.DataFrame(path)
+    df = pd.read_csv(path)
 
     # 3) map IDs → full names
     player_list = players.get_players()
