@@ -5,8 +5,10 @@ from nba_api.stats.static import players
 from pathlib import Path
 
 @st.cache_data
-def load_leaderboard(path: str = 'leaderboard.csv') -> pd.DataFrame:
-    df = pd.read_csv(path)
+def load_leaderboard():
+    base = Path(__file__).resolve().parent  # points to pages/SVJ/pages
+    path = base / "leaderboard.csv"  # or whatever the actual filename is
+    df = pd.DataFrame(path)
     # Map IDs → full names
     player_list = players.get_players()
     id_to_name = {p['id']: p['full_name'] for p in player_list}
