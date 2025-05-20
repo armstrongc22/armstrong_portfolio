@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from nba_api.stats.endpoints import ShotChartDetail
 from nba_api.stats.static import players, teams
-
+from pathlib import Path
 player_dict = players.get_players()
 team_dict = teams.get_teams()
 

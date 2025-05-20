@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from nba_api.stats.endpoints import PlayerGameLogs
 from nba_api.stats.static import players
-
+from pathlib import Path
 @st.cache_data
 def load_player_logs(player_name: str, season: str) -> pd.DataFrame:
     pid = players.find_players_by_full_name(player_name)[0]["id"]
