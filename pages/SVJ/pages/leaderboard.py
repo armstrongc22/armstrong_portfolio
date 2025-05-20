@@ -3,18 +3,24 @@ import streamlit as st
 import pandas as pd
 from nba_api.stats.static import players
 from pathlib import Path
+import players
 
 @st.cache_data
 def load_leaderboard():
-    base = Path(__file__).resolve().parent  # points to pages/SVJ/pages
-    path = base / "leaderboard.csv"  # or whatever the actual filename is
-    df = pd.DataFrame(path)
-    # Map IDs → full names
+    # 1) locate the CSV
+    base = Path(__file__).resolve().parent      # pages/SVJ/pages
+    path = base / "leaderboard.csv"             # adjust filename if needed
+
+    # 2) actually read it
+    df = pd.read_csv(path)
+
+    # 3) map IDs → full names
     player_list = players.get_players()
-    id_to_name = {p['id']: p['full_name'] for p in player_list}
-    df['player_name'] = df['player_id'].map(id_to_name)
-    # Reorder so name is first
-    cols = ['player_name'] + [c for c in df.columns if c != 'player_name']
+    id_to_name = {p["id"]: p["full_name"] for p in player_list}
+    df["player_name"] = df["player_id"].map(id_to_name)
+
+    # 4) reorder so name comes first
+    cols = ["player_name"] + [c for c in df.columns if c != "player_name"]
     return df[cols]
 
 def main():
