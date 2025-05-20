@@ -1,0 +1,10 @@
+pyproject.toml
+boi/boi.egg-info/PKG-INFO
+boi/boi.egg-info/SOURCES.txt
+boi/boi.egg-info/dependency_links.txt
+boi/boi.egg-info/top_level.txt
+boi/compute/__init__.py
+boi/compute/bq_sink.py
+boi/compute/scorer.py
+boi/ingest/__init__.py
+boi/ingest/osm_pois.py

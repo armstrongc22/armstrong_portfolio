@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "mindful-vial-460001-h6",
+  "private_key_id": "4d83b36dd3e999cbf47532260e2f4bdbaf6dca84",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDBWTICyHfi4jKv\nMMruQJNXgZb4W0nynQkCDZvcKClPAGu/JajsO8uCHYd7r9nvMbXAig1QOSohd7KY\n4LsAoU16nEzVfevu9osiLbWjH96Glm47GI07zKKOLGsxtvI1Q3x4tQ81V8KG2/fq\nhLqi2gnQiqTanuyPupTaQLtb9v9CMi5y+RvUSKpXhWMBjzMIcX2+aCOjSbDk6/v8\nzakIR/jdrMrMGm1mU5fOEZ4XXQL6G+43HZJAJQQMS0wKdIDEh3V4qURbItMILjaf\nYZ3p4HW9PY1crEixxehak4LiTGHfLk8d6y2Eph/w3+60zP5sI2o82Z0I24ZW8p5g\nZ1kdhqpJAgMBAAECggEAC15NbkdC1uh9gG2HBEE89WbQoKO4q/cHYfaFrokx/JiS\nvURFzWlEPjWyrKQaiITmVRhvT5AJsrp3mgn34agz7QlzPxS07z6enN2nkc+i5Uwp\n1d5/F2Zt1gKby7cgQKxKJxksq4wQcdHnOGo7d+EIG+a7A+iKRXbI0v7K+JpQrrlr\nZ0X6JIa4SbpH/ABufPCCBlVwoZYJ97cPQT+xNC3rnK5NPjKMuPgtFrjKQAf2q3Zf\nQJt+NeqPqHZ/diOkhO27aTl4JDm5/MvWFYNEYDjLRo6mtX4jIW8rRWRlxc6zQoPP\nnjW/jU5vbTTHx23tueoG4l9hjDpR+dFYYpSk0c8SDQKBgQD/+wNuAOFyCoE0QCab\nM3vz1gL5pgKV4YzKNN+yBWIfm/oaRV059zuEiC47XWoXUg1kLdS8eGIL5PrmEl+c\nZZ1+6oYSED3e8RXZ+tBGUam2Q5odz4IzpszTrebjV8usMPSawez8QA9INvxUAJnS\nMUeYLx6yBNArNXJJLNoQgrUqLwKBgQDBXPY8aicpmjBoUoqCPhKWHaG6dPLlUtbi\nrSxRL2oKkII8rxeSJhooUCP5t9J0KkDFBLsP22bQCeLnyybFvwdHNcKyClrjQsEq\n341FPUekerFlXTIDUefM+wlJ8jB95p+2iXn5813pmCcrZfjs98M5+JYUHJ7oUoJF\nxE+9BYvtBwKBgHXpPg8xwKczR4i19BKRiIstDXnJim9X0e5ipJfv+t7sjiwDv4mv\n5G6L/B/ES9YqKZj3s4KNQTyRYTERTZFRDVck2FUBvj4vdw1NhxqdCzu1sAwDRcpd\nDwSCmlQmYN8UPdf7dBpNt7xf96MKE9DKelwTeGQv62O73sTuMBRi4OhpAoGARCP1\nZi7mZCPBAVJtGx6ywBHrJ2EFI8lAjpsGLgnubZClRKtTPB6PQzuSofKkiGlHb+aN\n4TWpEpEZVCPkIvWBpBeO59z8UG/60Jf9GbRRpeXS0+y2rjLT5AlnKZbefc+i4tmp\nkWqw4pvK2eFSind5ZdlzUd0QJsDExb87dloZCEsCgYEA2+jqYHx/DVBuAK3uvGHs\ncdqmw5D2vaedeh72kwu1e37XPq+++cefdcrFb3ihG2KG1m5SqXXPhGn8sOWDdW0G\nEr3ozZxJRjWENvFnwcZtC6iWP4zUnRtn4MrDEq3YzPFj/U8dcBZw3pFdHUryj3QD\n3UW5TONOSroU8vOaLURnhYU=\n-----END PRIVATE KEY-----\n",
+  "client_email": "armstrong@mindful-vial-460001-h6.iam.gserviceaccount.com",
+  "client_id": "100174788388089791981",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/armstrong%40mindful-vial-460001-h6.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

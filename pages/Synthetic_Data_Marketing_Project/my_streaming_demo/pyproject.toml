@@ -1,0 +1,15 @@
+# pyproject.toml  –  declares “boi” as an installable package
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "boi"                # package import name
+version = "0.1.0"
+description = "Business Opportunity Index MVP"
+authors = [{name = "Christian Armstrong"}]
+readme = "README.md"
+requires-python = ">=3.8"
+
+[tool.setuptools.packages.find]
+where = ["boi"]             # tells setuptools to treat the boi/ folder as code
