@@ -3,7 +3,6 @@ import streamlit as st
 import pandas as pd
 from nba_api.stats.static import players
 from pathlib import Path
-import players
 
 @st.cache_data
 def load_leaderboard():
