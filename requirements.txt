@@ -3,27 +3,16 @@ pandas
 numpy
 plotly
 matplotlib
-os
 osmnx
-re
-time
-tenacity
 folium
-typing
+tenacity
 wbgapi
 h3
 pgeocode
-pathlib
-argparse
-io
 requests
-dash
-json
-datetime
 scikit-learn
-prince-ca  # if you use prince for MCA
+prince-ca
 confluent-kafka
 google-cloud-bigquery
-nba_api
 google-auth
-# …and any other libraries your apps import
+nba_api
