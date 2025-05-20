@@ -113,8 +113,10 @@ def load_wa():
     wa["Period"] = pd.to_datetime(wa["Period"],errors="coerce")
     return wa
 @st.cache_data(show_spinner=False)
-def load_wa_data(path: str = 'wa_cannabis_sales - Sheet1.csv') -> pd.DataFrame:
+def load_wa_data():
     """Load and preprocess Washington cannabis sales data."""
+    base = Path(__file__).resolve().parent  # .../pages/Cannabis_Market_Research
+    path = base / "wa_cannabis_sales - Sheet1.csv"
     df = pd.read_csv(path)
     df['Sales'] = df['Sales Last Month'].replace(r'[\$,]', '', regex=True).astype(float)
     df['Date']    = pd.to_datetime(df['Period'], errors='coerce')
