@@ -10,6 +10,9 @@ from pages import (
 st.set_page_config(page_title="Rockets Analytics Hub", layout="wide")
 # 3️⃣ Project description
 st.title("🔥Green vs. Goon: Battle for Cornerstone Supremacy🔥")
+BASE = Path(__file__).resolve().parent  # pages/SVJ/pages
+img_path = BASE / "output.png"
+st.image(str(img_path), use_container_width=True)
 
 def main():
     st.subheader("Project Description")
