@@ -1,0 +1,30 @@
+streamlit==1.45.1
+pandas
+numpy
+plotly
+matplotlib
+os
+osmnx
+re
+time
+tenacity
+folium
+typing
+wbgapi
+h3
+__future__
+pgeocode
+pathlib
+argparse
+io
+requests
+dash
+json
+datetime
+scikit-learn
+prince-ca  # if you use prince for MCA
+confluent-kafka
+google-cloud-bigquery
+nba_api
+google-auth
+# …and any other libraries your apps import
