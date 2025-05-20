@@ -199,11 +199,11 @@ def load_co_license_data(retail_path: str, medical_path: str) -> pd.DataFrame:
 def generate_co_count_map_html(counts_df: pd.DataFrame, title: str) -> str:
     """Generate HTML for a Folium choropleth of license counts by county."""
     # Load Colorado counties
-    co = gpd.read_file(
-        'https://www2.census.gov/geo/tiger/GENZ2018/shp/cb_2018_us_county_500k.zip'
-    )
-    co = co[co['STATEFP'] == '08'].copy()
-    co['county_name'] = co['NAME'].str.lower()
+    # 1) Load vendored Colorado counties
+    shp_path = DATA_DIR / "cb_2018_us_county_500k.zip"
+    co = gpd.read_file(f"zip://{shp_path}")
+    co = co[co["STATEFP"] == "08"].copy()
+    co["county_name"] = co["NAME"].str.lower()
 
     # Merge counts
     counts_df['county_name'] = counts_df['county_name'].str.lower()
