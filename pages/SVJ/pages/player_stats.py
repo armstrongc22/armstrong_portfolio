@@ -17,7 +17,9 @@ def load_player_logs(player_name: str, season: str) -> pd.DataFrame:
 
 
 def main():
-    st.image("output.png", use_container_width=True)
+    BASE = Path(__file__).resolve().parent  # pages/SVJ/pages
+    img_path = BASE / "output.png"
+    st.image(str(img_path), use_container_width=True)
     st.header("Player Performance Over Season")
     player = st.selectbox("Player", ["Alperen Sengun", "Jalen Green"])
     season = st.selectbox("Season", ["2024-25", "2023-24"])

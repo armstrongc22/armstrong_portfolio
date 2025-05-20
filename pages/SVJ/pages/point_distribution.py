@@ -7,7 +7,9 @@ PLAYERS = {"Alperen Sengun": 1630174, "Jalen Green": 1630224}
 
 
 def main():
-    st.image("output.png", use_container_width=True)
+    BASE = Path(__file__).resolve().parent  # pages/SVJ/pages
+    img_path = BASE / "output.png"
+    st.image(str(img_path), use_container_width=True)
     st.header("Points-per-Game Distribution by Season")
     player_name = st.selectbox("Select Player", list(PLAYERS.keys()))
     fig, axes = plt.subplots(2, 2, figsize=(10, 8))

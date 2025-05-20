@@ -33,7 +33,9 @@ SEASONS = ["2021-22", "2022-23", "2023-24", "2024-25"]
 PLAYERS = {"Alperen Sengun": get_player_id("Alperen Sengun"), "Jalen Green": get_player_id("Jalen Green")}
 
 def main():
-    st.image("output.png", use_container_width=True)
+    BASE = Path(__file__).resolve().parent  # pages/SVJ/pages
+    img_path = BASE / "output.png"
+    st.image(str(img_path), use_container_width=True)
     st.header("Shot Chart Distribution by Season")
     player_name = st.selectbox("Player", list(PLAYERS.keys()))
     pid = PLAYERS[player_name]

@@ -15,7 +15,9 @@ def load_leaderboard(path: str = 'leaderboard.csv') -> pd.DataFrame:
     return df[cols]
 
 def main():
-    st.image("output.png", use_container_width=True)
+    BASE = Path(__file__).resolve().parent  # pages/SVJ/pages
+    img_path = BASE / "output.png"
+    st.image(str(img_path), use_container_width=True)
     st.header("Leaderboard Data")
     df_lb = load_leaderboard()
     st.dataframe(df_lb)

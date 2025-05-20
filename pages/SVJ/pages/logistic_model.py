@@ -29,7 +29,9 @@ def build_feature_matrix(team_id: int, season: str, tags: dict) -> pd.DataFrame:
 
 
 def main():
-    st.image("output.png", use_container_width=True)
+    BASE = Path(__file__).resolve().parent  # pages/SVJ/pages
+    img_path = BASE / "output.png"
+    st.image(str(img_path), use_container_width=True)
     st.header("Win-Prediction Model Coefficients")
     team_id = 1610612745
     season = st.selectbox("Season (Model)", ["2024-25", "2023-24"])
