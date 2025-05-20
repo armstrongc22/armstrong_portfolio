@@ -1,4 +1,5 @@
 import streamlit as st
+from pathlib import Path
 from pages import (
     player_stats,
     logistic_model,
