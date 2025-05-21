@@ -1,4 +1,5 @@
 confluent-kafka
+db-dtypes>=1.0.0
 folium
 geopandas
 google-auth
