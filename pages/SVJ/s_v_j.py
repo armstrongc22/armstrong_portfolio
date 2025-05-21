@@ -24,18 +24,13 @@ PAGES = {
     "Shot Distribution": shot_distribution.main,
     "Leaderboard": leaderboard.main,
 }
-choice = st.sidebar.radio(
-    "Choose Dashboard:",
-    ["Home"] + list(PAGES),
-    index=0,  # default to "Home"
-)
 
 # --- Home content ---
 if choice == "Home":
     st.subheader("Project Description")
     st.write(
         """
-        For the last 4 years Rockets fans … fundamental basketball principles.
+        For the last 4 years Rockets fans and the NBA lexicon as a whole have passionately argued the merits of both Jalen Green and Alperen Sengun's viability as franchise cornerstones. The impact of their success or failure in this role will shape the NBA's 5th most valuable franchise for the next 10 years, and leveraging the team one way or another in this regard, is a potentially multi-billion dollar decision. This project endeavors to weigh the facts dispassionately, and deliver a verdict on the debate based in statistical analysis, decision mathematics, and fundamental basketball principles.
         """
     )
     # if you still want the big banner on Home:
