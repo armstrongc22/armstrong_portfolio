@@ -5,7 +5,7 @@ from google.cloud import bigquery, bigquery_storage_v1
 from google.oauth2 import service_account
 import pandas as pd, boi.config as cfg
 from pathlib import Path
-
+import streamlit as st
 # ── 1. Path to your key (pull from config or hard-code here) ────────────
 info = st.secrets["bigquery"]["SERVICE_ACCOUNT_FILE"]
 creds = service_account.Credentials.from_service_account_file(
