@@ -7,9 +7,7 @@ import pandas as pd, boi.config as cfg
 from pathlib import Path
 
 # ── 1. Path to your key (pull from config or hard-code here) ────────────
-SERVICE_ACCOUNT_FILE = Path(
-    r"C:\Users\Armstrong\boi\mindful-vial-460001-h6-fd8675f1598b.json"
-)
+
 creds = service_account.Credentials.from_service_account_file(
     SERVICE_ACCOUNT_FILE
 )
