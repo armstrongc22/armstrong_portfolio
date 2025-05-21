@@ -4,7 +4,9 @@ from boi.compute import scorer
 import boi.ingest.fsq_popularity as fsq
 
 def main(mode):
-    cfg.USE_KAFKA = (mode == "stream")
+    from boi import storage_csv as storage  # Enforce local mode
+    cfg.USE_KAFKA = False
+
 
     iso = {c["iso3"] for c in cfg.CITIES.values()}
     worldbank.fetch(iso)

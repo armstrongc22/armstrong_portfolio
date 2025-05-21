@@ -1,21 +1,21 @@
 import pandas as pd, numpy as np
 from sklearn.preprocessing import MinMaxScaler
 import boi.config as cfg
-from boi.storage_bq import read_sql, write_df, client   # client already carries creds
+from boi.storage_csv import write_df, read_sql
+   # client already carries creds
 
 # ----------------------------------------------------------------------
 # 1.  CITY-LEVEL SCORE  (same as before)
 # ----------------------------------------------------------------------
-SQL = f"""
-SELECT s.city, s.category, s.count,
-       d.population
-FROM   `{cfg.PROJECT}.{cfg.DATASET}.supply`  AS s
-JOIN   `{cfg.PROJECT}.{cfg.DATASET}.demand`  AS d
-USING  (iso3)
-"""
+def load_joined_data():
+    s = read_sql("supply")
+    d = read_sql("demand")
+    df = pd.merge(s, d, on="iso3", how="inner")
+    return df
+
 
 def compute():
-    df = read_sql(SQL)
+    df = load_joined_data()
 
     df["per_10k"] = df["count"] / (df["population"] / 1e4)
     df["gap_pct"] = 1 - df.apply(
@@ -42,27 +42,14 @@ def compute():
 # 2.  HEX-LEVEL “local_opportunity” TABLE
 # ----------------------------------------------------------------------
 def build_hex_opportunity():
-    """
-    Join hex foot-traffic with laundromat (or any category) scores and
-    compute   local_opportunity = popularity × (opportunity_score / 100)
-    """
+    f = read_sql("foot_traffic")
+    s = read_sql("scores")
+    df = f.merge(s[s["category"] == "laundromat"], on="city")
+    df["opp_norm"] = df["opportunity_score"] / 100
+    df["local_opportunity"] = (df["popularity"] * df["opp_norm"]).round(3)
+    write_df(df[["city", "hex", "popularity", "opp_norm", "local_opportunity"]],
+             "hex_opportunity", mode="replace")
 
-    sql = f"""
-    CREATE OR REPLACE TABLE `{cfg.PROJECT}.{cfg.DATASET}.hex_opportunity` AS
-    SELECT
-      f.city,
-      f.hex,
-      f.popularity,
-      s.opportunity_score / 100      AS opp_norm,
-      ROUND(f.popularity * (s.opportunity_score / 100), 3)
-                                     AS local_opportunity
-    FROM `{cfg.PROJECT}.{cfg.DATASET}.foot_traffic` AS f
-    JOIN `{cfg.PROJECT}.{cfg.DATASET}.scores`       AS s
-      ON s.city = f.city
-    WHERE s.category = 'laundromat';
-    """
-    client.query(sql).result()
-    print("✅ hex_opportunity table refreshed")
 
 
 # ----------------------------------------------------------------------

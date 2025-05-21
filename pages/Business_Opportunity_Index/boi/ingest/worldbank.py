@@ -22,7 +22,8 @@ import pandas as pd
 import wbgapi as wb
 
 import boi.config as cfg
-from boi.storage_bq import write_df  # always safe to import; used only if needed
+from boi.storage_csv import write_df, read_sql
+  # always safe to import; used only if needed
 
 # ── Optional Kafka producer ────────────────────────────────────────────────
 if getattr(cfg, "USE_KAFKA", False):

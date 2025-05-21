@@ -1,4 +1,10 @@
 # ---------- Business rules ----------
+from pathlib import Path
+
+LOCAL_DATA_DIR = Path(r"C:\Users\Armstrong\Documents\GitHub\armstrong_portfolio\pages\Business_Opportunity_Index\boi\datasets")
+LOCAL_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+
 CITIES = {
     "Lagos":      {"lat": 6.465,  "lon": 3.406,  "iso3": "NGA"},
     "Medellín":   {"lat": 6.251,  "lon": -75.56, "iso3": "COL"},

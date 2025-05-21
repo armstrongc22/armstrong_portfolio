@@ -4,7 +4,8 @@ boi.ingest.fsq_popularity  –  Free-tier foot-traffic sampler
 from __future__ import annotations
 import time, json, requests, pandas as pd, h3
 import boi.config as cfg
-from boi.storage_bq import write_df
+from boi.storage_csv import write_df, read_sql
+
 import h3        # works for all recent h3-py versions
 
 # compatibility alias  ──────────────────────────────────────────────

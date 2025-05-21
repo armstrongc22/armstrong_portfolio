@@ -2,7 +2,7 @@
 import json, pandas as pd, osmnx as ox
 from osmnx import _errors as oxerr              # <-- import exceptions
 import boi.config as cfg
-from boi.storage_bq import write_df
+from boi.storage_csv import write_df, read_sql
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 import requests.exceptions as req_exc
 # optional Kafka (unchanged) ..............................
