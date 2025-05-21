@@ -8,9 +8,7 @@ from pathlib import Path
 import streamlit as st
 # ── 1. Path to your key (pull from config or hard-code here) ────────────
 info = st.secrets["bigquery"]["SERVICE_ACCOUNT_FILE"]
-creds = service_account.Credentials.from_service_account_file(
-    info
-)
+creds = service_account.Credentials.from_service_account_info(info)
 # ────────────────────────────────────────────────────────────────────────
 
 client   = bigquery.Client(project=cfg.PROJECT, credentials=creds)
