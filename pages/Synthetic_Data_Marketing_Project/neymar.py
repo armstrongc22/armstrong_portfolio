@@ -32,7 +32,7 @@ live_consumer.subscribe(['watch_live_topic'])
 # ── 3) BigQuery client setup ──────────────────────────────────────────────
 info = st.secrets["bigquery"]["SERVICE_ACCOUNT_FILE"]
 CRED = service_account.Credentials.from_service_account_info(info)
-PROJECT = "mindful-vial-460001-h6"
+PROJECT = info["project_id"]
 DATASET = "euphoria"
 client = bigquery.Client(project=PROJECT, credentials=CRED)
 
