@@ -10,7 +10,7 @@ from confluent_kafka import Consumer, TopicPartition
 from datetime import datetime, timezone, timedelta
 import streamlit as st
 from sklearn.cluster import KMeans
-
+import streamlit as st
 # ── 1) Streamlit configuration ───────────────────────────────────────────
 st.set_page_config(page_title="Euphoria Analytical Dashboard", layout="wide")
 
@@ -30,9 +30,8 @@ live_consumer = Consumer(KAFKA_CONF)
 live_consumer.subscribe(['watch_live_topic'])
 
 # ── 3) BigQuery client setup ──────────────────────────────────────────────
-KEY_PATH = "mindful-vial-460001-h6-4d83b36dd3e9.json"
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = KEY_PATH
-CRED = service_account.Credentials.from_service_account_file(KEY_PATH)
+info = st.secrets["bigquery"]["SERVICE_ACCOUNT_FILE"]
+CRED = service_account.Credentials.from_service_account_info(info)
 PROJECT = "mindful-vial-460001-h6"
 DATASET = "euphoria"
 client = bigquery.Client(project=PROJECT, credentials=CRED)
