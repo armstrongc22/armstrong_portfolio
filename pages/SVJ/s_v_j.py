@@ -36,5 +36,4 @@ st.write(
     # if you still want the big banner on Home:
 
 # --- Delegate to the other pages only when picked ---
-else:
-    PAGES[choice]()
+PAGES[choice]()
