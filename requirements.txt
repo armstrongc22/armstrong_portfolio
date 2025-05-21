@@ -2,7 +2,8 @@ confluent-kafka
 folium
 geopandas
 google-auth
-google-cloud-bigquery
+google-cloud-bigquery>=3.12.0
+google-cloud-bigquery-storage>=2.18.1
 h3
 matplotlib
 nba_api
