@@ -9,6 +9,11 @@ from pages import (
 )
 
 st.set_page_config(page_title="Rockets Analytics Hub", layout="wide")
+img = Path(__file__).resolve().parent / "pages" / "output.png"
+    if img.exists():
+        st.image(str(img), use_container_width=True)
+    else:
+        st.info("Banner image not found; remove or fix the path if you don’t need it.")
 # 3️⃣ Project description
 
 # --- Sidebar selector with a "Home" default ---
@@ -34,11 +39,6 @@ if choice == "Home":
         """
     )
     # if you still want the big banner on Home:
-    img = Path(__file__).resolve().parent / "pages" / "output.png"
-    if img.exists():
-        st.image(str(img), use_container_width=True)
-    else:
-        st.info("Banner image not found; remove or fix the path if you don’t need it.")
 
 # --- Delegate to the other pages only when picked ---
 else:
