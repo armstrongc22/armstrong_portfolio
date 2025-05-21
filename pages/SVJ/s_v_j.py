@@ -10,9 +10,9 @@ from pages import (
 
 st.set_page_config(page_title="Rockets Analytics Hub", layout="wide")
 img = Path(__file__).resolve().parent / "pages" / "output.png"
-    if img.exists():
+if img.exists():
         st.image(str(img), use_container_width=True)
-    else:
+else:
         st.info("Banner image not found; remove or fix the path if you don’t need it.")
 # 3️⃣ Project description
 
