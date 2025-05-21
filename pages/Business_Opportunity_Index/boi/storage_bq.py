@@ -7,9 +7,9 @@ import pandas as pd, boi.config as cfg
 from pathlib import Path
 
 # ── 1. Path to your key (pull from config or hard-code here) ────────────
-
+info = st.secrets["bigquery"]["SERVICE_ACCOUNT_FILE"]
 creds = service_account.Credentials.from_service_account_file(
-    SERVICE_ACCOUNT_FILE
+    info
 )
 # ────────────────────────────────────────────────────────────────────────
 
