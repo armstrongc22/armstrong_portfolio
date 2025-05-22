@@ -1,13 +1,13 @@
 import streamlit as st
 import pydeck as pdk
 import h3, geopandas as gpd, shapely.geometry as shpg, numpy as np
-from boi.storage_csv import write_df, read_sql
+from boi.storage_csv as bq
 import boi.config as cfg
 
 st.title("High Foot-Traffic Hexes  ×  Opportunity Gap")
 
 # ── 1  City selector ─────────────────────────────────────────────────────
-city = st.selectbox("City", sorted(cfg.CITIES.keys()))
+city = st.selectbox("City", sorted(bq.cfg.CITIES.keys()))
 
 # ── 2  Slider for “Local Opportunity” threshold 0–1 ─────────────────────
 thresh = st.slider(
@@ -20,9 +20,9 @@ thresh = st.slider(
 )
 
 # ── 3  Query the joined table (hex_opportunity) ─────────────────────────
-hex_df = read_sql(f"""
+hex_df = bq.read_sql(f"""
     SELECT hex, popularity, local_opportunity
-    FROM `{cfg.PROJECT}.{cfg.DATASET}.hex_opportunity`
+    FROM `{bq.cfg.PROJECT}.{bq.cfg.DATASET}.hex_opportunity`
     WHERE city = '{city}'
       AND local_opportunity >= {thresh}
 """)
@@ -70,7 +70,7 @@ TOOLTIP = {
     "style": {"color": "white"},
 }
 
-centre = cfg.CITIES[city]
+centre = bq.cfg.CITIES[city]
 view = pdk.ViewState(latitude=centre["lat"],
                      longitude=centre["lon"],
                      zoom=11, pitch=30)
