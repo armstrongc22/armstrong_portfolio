@@ -1,7 +1,7 @@
 # ---------- Business rules ----------
 from pathlib import Path
 
-LOCAL_DATA_DIR = Path(r"C:\Users\Armstrong\Documents\GitHub\armstrong_portfolio\pages\Business_Opportunity_Index\boi\datasets")
+LOCAL_DATA_DIR = Path(__file__).parent / "dataset"
 LOCAL_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 
