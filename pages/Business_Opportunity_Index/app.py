@@ -1,7 +1,7 @@
 import streamlit as st
 import pydeck as pdk
 import h3, geopandas as gpd, shapely.geometry as shpg, numpy as np
-from boi import storage_bq as bq
+from boi.storage_csv import write_df, read_sql
 
 
 st.title("High Foot-Traffic Hexes  ×  Opportunity Gap")
@@ -20,7 +20,7 @@ thresh = st.slider(
 )
 
 # ── 3  Query the joined table (hex_opportunity) ─────────────────────────
-hex_df = bq.read_sql(f"""
+hex_df = read_sql(f"""
     SELECT hex, popularity, local_opportunity
     FROM `{bq.cfg.PROJECT}.{bq.cfg.DATASET}.hex_opportunity`
     WHERE city = '{city}'
