@@ -1,7 +1,7 @@
 # ---------- Business rules ----------
 from pathlib import Path
 
-LOCAL_DATA_DIR = Path(__file__).parent / "dataset"
+LOCAL_DATA_DIR = Path(__file__).parent / "datasets"
 LOCAL_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 
