@@ -2,7 +2,7 @@ import streamlit as st
 import pydeck as pdk
 import h3, geopandas as gpd, shapely.geometry as shpg, numpy as np
 from boi.storage_csv import write_df, read_sql
-
+import boi.config as cfg
 
 st.title("High Foot-Traffic Hexes  ×  Opportunity Gap")
 
