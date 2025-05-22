@@ -5,7 +5,8 @@ import boi.storage_csv as bq
 import boi.config as cfg
 
 st.title("High Foot-Traffic Hexes  ×  Opportunity Gap")
-
+st.write("Looking in:", cfg.LOCAL_DATA_DIR)
+st.write("Found:", [f.name for f in cfg.LOCAL_DATA_DIR.glob("*.csv")])
 # ── 1  City selector ─────────────────────────────────────────────────────
 city = st.selectbox("City", sorted(cfg.CITIES.keys()))
 
