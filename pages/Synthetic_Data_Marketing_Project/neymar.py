@@ -157,7 +157,7 @@ def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
 @st.cache_data
 def update_year(y: int):
     watch = pd.read_csv(DATA_DIR / "watch_topic.csv")
-    watch['date'] = pd.to_datetime(watch.date)
+    watch['date'] = pd.to_datetime(watch['date'], utc=True, infer_datetime_format=True)
     df = watch[watch.date.dt.year==y].groupby('country')['length'].sum().reset_index()
     df['watch_hours'] = df.length/3600
     df['pct_rank'] = df.watch_hours.rank(pct=True)
@@ -180,7 +180,7 @@ def update_live():
     for m in msgs or []:
         if m and not m.error():
             d = json.loads(m.value().decode())
-            ts = pd.to_datetime(d['date'])
+            ts = pd.to_datetime(d['date'], utc=True, infer_datetime_format=True)
             if ts >= cutoff:
                 recs.append(d)
     if not recs:
@@ -224,10 +224,20 @@ def main():
                 'streams_topic', 'partners_topic',
                 'games_topic', 'customers_topic'
             ]
-            results = {t: sample_topic_to_size(t) for t in topics}
-            st.json({t: {k: str(v) for k,v in paths.items()} for t,paths in results.items()})
+            results = {}
+            from confluent_kafka import KafkaException
+            for t in topics:
+                try:
+                    paths = sample_topic_to_size(t)
+                    results[t] = {k: str(v) for k, v in paths.items()}
+                except KafkaException as ke:
+                    results[t] = {'error': f'Kafka error: {ke}'}
+                except Exception as e:
+                    results[t] = {'error': str(e)}
+            st.json(results)
         st.markdown("---")
         st.write("Data CSVs folder:")
+        st.write([p.name for p in DATA_DIR.iterdir()])("Data CSVs folder:")
         st.write([p.name for p in DATA_DIR.iterdir()])
 
     with tabs[1]:
