@@ -5,8 +5,9 @@ def table_path(name: str) -> str:
     return LOCAL_DATA_DIR / f"{name}.csv"
 
 def read_sql(name: str) -> pd.DataFrame:
-    path = table_path(name)
+    path = LOCAL_DATA_DIR / f"{name}.csv"
     return pd.read_csv(path) if path.exists() else pd.DataFrame()
+
 
 def write_df(df: pd.DataFrame, name: str, mode: str = "append"):
     path = table_path(name)
