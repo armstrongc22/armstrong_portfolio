@@ -236,19 +236,36 @@ def main():
     # … after your KPI and Yearly‐rank tabs …
     with tabs[2]:
         st.header("Buyer Segments (Mahiman Trophy)")
+        # after you call your compute function...
         coords, df_seg, summary, centers = compute_trophy_segments()
+
         if df_seg.empty:
-            st.warning(
-                "No trophy‐customer records found. Did you split `trophy_customers.csv` into `trophy_customers_part1.csv` & `part2.csv` under `data_csvs/trophy/`?")
+            st.warning("No trophy‐customer records found…")
         else:
+            # merge cluster into coords
+            seg_df = coords.copy()
+            seg_df["cluster"] = df_seg["cluster"].values
+
             st.dataframe(summary)
-            fig = px.scatter(coords, x="Dim1", y="Dim2", color="cluster")
-            fig.add_scatter(x=centers[:, 0], y=centers[:, 1], mode="markers",
-                            marker=dict(symbol="x", size=12))
+
+            fig = px.scatter(
+                seg_df,
+                x="Dim1",
+                y="Dim2",
+                color="cluster",  # now this column exists
+                title="MCA + KMeans of Trophy Buyers",
+                labels={"cluster": "Segment"}
+            )
+            # overlay centroids
+            fig.add_scatter(
+                x=centers[:, 0],
+                y=centers[:, 1],
+                mode="markers",
+                marker=dict(symbol="x", size=12, color="black"),
+                name="Centroids"
+            )
             st.plotly_chart(fig, use_container_width=True)
-    with tabs[3]:
-        st.header("Detected CSV files")
-        st.write([p.name for p in DATA_DIR.glob("*.csv")])
+
 
 if __name__=="__main__":
     main()
