@@ -63,7 +63,7 @@ def compute_mca_and_segments(df: pd.DataFrame, col1: str, col2: str, n_clusters:
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 def main():
-    st.title("📊 Euphoria CSV Dashboard (fixed paths)")
+    st.title("📊 Euphoria CSV Dashboard (Desktop Only)")
 
     tabs = st.tabs(["1️⃣ Disk & Heads","2️⃣ KPIs","3️⃣ Yearly Map","4️⃣ Segments"])
 

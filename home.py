@@ -19,28 +19,28 @@ st.markdown(
 )
 
 # ─── Card definitions ────────────────────────────────────────────────────────────
-BASE = Path(__file__).resolve().parent
-
+BASE_DIR = Path(__file__).parent       # the folder containing home.py
+IMG_DIR  = BASE_DIR / "images"
 # make sure you put your gradient thumbs next to this file (or adjust these paths)
 projects = [
     {
         "name": "SVJ Cornerstone Debate",
-        "thumb": BASE / "rockets.png",
+        "thumb": IMG_DIR / "rockets.png",
         "url": "https://armstrongportfolio-9xwrmtbknbm2cnrtcvvpmq.streamlit.app"
     },
     {
         "name": "Cannabis Market Research",
-        "thumb": BASE / "canna.png",
+        "thumb": IMG_DIR / "canna.png",
         "url": "https://armstrongportfolio-rj6cipckjilm3vdbacdvrp.streamlit.app"
     },
     {
         "name": "Business Opportunity Index",
-        "thumb": BASE / "boi.png",
+        "thumb": IMG_DIR / "boi.png",
         "url": "https://armstrongportfolio-mq3htsuzxwozs2gmfwgrre.streamlit.app"
     },
     {
-        "name": "Synthetic Data Marketing",
-        "thumb": BASE / "neymar.png",
+        "name": "Synthetic Data Marketing(Desktop Only)",
+        "thumb": IMG_DIR / "neymar.png",
         "url": "https://armstrongportfolio-febhp4fxhsde5csvsgzrbx.streamlit.app/"
     },
 ]
