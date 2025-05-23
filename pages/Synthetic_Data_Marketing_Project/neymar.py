@@ -6,72 +6,56 @@ from sklearn.cluster import KMeans
 from pathlib import Path
 from datetime import datetime
 
-# ── CONFIG ────────────────────────────────────────────────────────────────────
-st.set_page_config(page_title="Euphoria CSV Dashboard", layout="wide")
-HERE     = Path(__file__).parent
-DATA_DIR = HERE / "data_csvs"
+# ── Page config ────────────────────────────────────────────────────────────────
+st.set_page_config(page_title="Euphoria CSV Analytical Dashboard", layout="wide")
+
+# ── Where your CSVs live ───────────────────────────────────────────────────────
+DATA_DIR = Path("data_csvs")
 TROPHY_DIR = DATA_DIR / "trophy"
-# ── UTILITY: load any CSVs matching base name ─────────────────────────────────
-def load_topic_csvs(topic: str) -> pd.DataFrame:
+
+# ── Helper to glob & concat versioned files ────────────────────────────────────
+def load_csv(name: str, folder: Path = DATA_DIR) -> pd.DataFrame:
     """
-    Finds all files data_csvs/<base>*\.csv where base = topic or topic[:-6]
-    (to handle topics named like 'watch_topic' vs files named 'watch.csv').
-    Returns the concatenated DataFrame (or empty DF if none/non-empty).
+    Find all files matching name*.csv in folder, concat, drop empty.
+    Raise FileNotFoundError if none or all empty.
     """
-    # strip trailing "_topic" if present:
-    base = topic[:-6] if topic.endswith("_topic") else topic
-    files = sorted(DATA_DIR.glob(f"{base}*.csv"))
+    files = sorted(folder.glob(f"{name}*.csv"))
+    if not files:
+        raise FileNotFoundError(f"No CSVs found for '{name}' in {folder}")
     dfs = []
     for f in files:
         try:
             df = pd.read_csv(f)
+            if not df.empty:
+                dfs.append(df)
         except pd.errors.EmptyDataError:
-            continue
-        if not df.empty:
-            dfs.append(df)
-    if dfs:
-        return pd.concat(dfs, ignore_index=True)
-    return pd.DataFrame()
-
-@st.cache_data
-def load_trophy_customers() -> pd.DataFrame:
-    parts = sorted(TROPHY_DIR.glob("trophy_customers_part*.csv"))
-    if not parts:
-        raise FileNotFoundError(
-            f"No trophy CSVs in {TROPHY_DIR}; expected trophy_customers_part1.csv, part2.csv"
-        )
-    dfs = []
-    for p in parts:
-        df = pd.read_csv(p)
-        if not df.empty:
-            dfs.append(df)
+            pass
     if not dfs:
-        raise FileNotFoundError("All trophy CSVs are empty")
+        raise FileNotFoundError(f"All {name} CSVs are empty in {folder}")
     return pd.concat(dfs, ignore_index=True)
 
-# ── 1) KPI loader ─────────────────────────────────────────────────────────────
+# ── KPI loader ────────────────────────────────────────────────────────────────
 @st.cache_data
 def load_kpis() -> pd.DataFrame:
-    watch    = load_topic_csvs("watch_topic")
-    purchase = load_topic_csvs("purchase_events_topic")
-    streams  = load_topic_csvs("streams_topic")
-    partners = load_topic_csvs("partners")
-    games    = load_topic_csvs("games_topic")
+    # load each topic dump
+    watch    = load_csv("watch")
+    streams  = load_csv("streams")
+    purchase = load_csv("purchase_events")
+    partners = load_csv("partners")
+    games    = load_csv("games")
+    merch    = load_csv("merch")
 
-    if watch.empty or purchase.empty or streams.empty or partners.empty or games.empty:
-        return pd.DataFrame()
-
-    # Top 10 viewed countries
+    # Top 10 Viewed Countries
     viewed = (
         watch.groupby("country")["length"]
              .sum()
              .nlargest(10)
-             .reset_index()
-             .rename(columns={"country":"label","length":"value"})
+             .reset_index(name="value")
+             .rename(columns={"country":"label"})
     )
     viewed["kpi"] = "Top 10 Viewed Countries"
 
-    # Top 8 purchased products
+    # Top 8 Purchased Products
     purchased = (
         purchase.groupby("product_name")
                 .size()
@@ -81,33 +65,32 @@ def load_kpis() -> pd.DataFrame:
     )
     purchased["kpi"] = "Top 8 Purchased Products"
 
-    # Top 10 streamer performance
-    sp = streams.merge(partners, on="partner_id", how="left")
-    sp["score"] = (sp.viewers_total/(sp.length.replace(0,1))) * sp.comments_total
+    # Top 10 Streamer Performance
+    sp = streams.merge(partners, on="partner_id")
+    sp["score"] = (sp.viewers_total / sp.length.replace(0,1)) * sp.comments_total
     streamer = (
         sp.groupby("screen_name")["score"]
           .sum()
           .nlargest(10)
-          .reset_index()
-          .rename(columns={"screen_name":"label","score":"value"})
+          .reset_index(name="value")
+          .rename(columns={"screen_name":"label"})
     )
-    streamer["value"] = streamer["value"].round(2)
     streamer["kpi"] = "Top 10 Streamer Performance"
 
-    # Top 2 best‐selling games
+    # Top 2 Best‐Selling Games
     best_games = (
         purchase[purchase.category=="game"]
-        .groupby("product_name")
-        .size()
-        .nlargest(2)
-        .reset_index(name="value")
-        .rename(columns={"product_name":"label"})
+               .groupby("product_name")
+               .size()
+               .nlargest(2)
+               .reset_index(name="value")
+               .rename(columns={"product_name":"label"})
     )
     best_games["kpi"] = "Top 2 Best-Selling Games"
 
-    # Top 2 most‐streamed games
+    # Top 2 Most-Streamed Games
     sg = (
-        streams.merge(games, on="game_id", how="left")
+        streams.merge(games, on="game_id")
                .groupby("title")
                .size()
                .nlargest(2)
@@ -116,33 +99,29 @@ def load_kpis() -> pd.DataFrame:
     )
     sg["kpi"] = "Top 2 Most-Streamed Games"
 
+    # combine
     return pd.concat(
         [viewed, purchased, streamer, best_games, sg],
         ignore_index=True
     )
 
-# ── 2) Yearly Watch Rank ──────────────────────────────────────────────────────
+# ── Yearly Watch Map ──────────────────────────────────────────────────────────
 @st.cache_data
 def update_year(year: int):
-    watch = load_topic_csvs("watch")
-    if watch.empty:
-        return px.choropleth(pd.DataFrame(columns=["country","watch_hours"]),
-                             locations="country", color="watch_hours")
-
+    watch = load_csv("watch")
     watch["date"] = pd.to_datetime(watch["date"], errors="coerce")
-    df_year = watch[watch["date"].dt.year==year]
+    df_year = watch[watch["date"].dt.year == year]
     if df_year.empty:
+        st.warning(f"No watch data for {year}")
         return px.choropleth(pd.DataFrame(columns=["country","watch_hours"]),
                              locations="country", color="watch_hours")
 
     grouped = (
         df_year.groupby("country")["length"]
                .sum()
-               .reset_index()
-               .rename(columns={"length":"watch_hours"})
+               .reset_index(name="watch_hours")
     )
     grouped["pct_rank"] = grouped["watch_hours"].rank(pct=True)
-
     fig = px.choropleth(
         grouped,
         locations="country",
@@ -155,107 +134,105 @@ def update_year(year: int):
     fig.update_layout(title=f"Yearly Watch Rank: {year}")
     return fig
 
-# ── 3) MCA + KMeans on Trophy Purchasers ──────────────────────────────────────
-import numpy as np
-
-
+# ── MCA + KMeans on Trophy Customers ──────────────────────────────────────────
 @st.cache_data
 def compute_trophy_segments(n_clusters: int = 4):
-    # 1) Load only your pre-sampled trophy customer CSVs (split into parts if needed)
-    parts = sorted((DATA_DIR / "trophy").glob("trophy_customers_part*.csv"))
+    # read your two halves of trophy_customers
+    parts = sorted(TROPHY_DIR.glob("trophy_customers_part*.csv"))
     if not parts:
-        raise FileNotFoundError("No trophy customer CSVs found in data_csvs/trophy/")
+        raise FileNotFoundError("Place trophy_customers_part1.csv & part2.csv under data_csvs/trophy/")
     df = pd.concat([pd.read_csv(p) for p in parts], ignore_index=True)
     if df.empty:
         # nothing to do
         return pd.DataFrame(), df, pd.DataFrame(), []
 
-    # 2) Compute age correctly
+    # compute age
     df["birthday"] = pd.to_datetime(df["birthday"], errors="coerce")
     df["age"] = (pd.Timestamp.now() - df["birthday"]).dt.days // 365
-    df = df.dropna(subset=["age", "gender", "region"])
+    df = df.dropna(subset=["age","gender","region"])
 
-    # 3) Bin ages
+    # bin
     df["age_bin"] = pd.cut(
         df["age"],
-        bins=range(10, 81, 5),
-        labels=[f"{i}-{i+4}" for i in range(10, 80, 5)],
+        bins=range(10,81,5),
+        labels=[f"{i}-{i+4}" for i in range(10,80,5)],
         right=False
     ).astype(str)
     df = df[df["age_bin"] != "nan"]
 
-    # 4) MCA on the three categorical columns
+    # MCA
     mca = prince.MCA(n_components=2, random_state=42)
-    coords_arr = mca.fit_transform(df[["age_bin", "gender", "region"]])
-    coords = pd.DataFrame(coords_arr, columns=["Dim1", "Dim2"], index=df.index)
+    coords_arr = mca.fit_transform(df[["age_bin","gender","region"]])
+    coords = pd.DataFrame(coords_arr, columns=["Dim1","Dim2"], index=df.index)
 
-    # 5) KMeans clustering
+    # KMeans
     km = KMeans(n_clusters=n_clusters, random_state=42)
     coords["cluster"] = km.fit_predict(coords)
 
-    # 6) Attach cluster back to the customer df
+    # attach back
     df["cluster"] = coords["cluster"].astype(int)
 
-    # 7) Summarize
+    # summary
     summary = (
-        coords
-        .groupby("cluster")
-        .agg(size=("cluster", "count"),
-             avg_dim1=("Dim1", "mean"))
-        .reset_index()
+        coords.groupby("cluster")
+              .agg(size=("cluster","count"), avg_dim1=("Dim1","mean"))
+              .reset_index()
     )
 
     return coords, df, summary, km.cluster_centers_
-# ── Streamlit UI ─────────────────────────────────────────────────────────────
+
+# ── UI ─────────────────────────────────────────────────────────────────────────
 def main():
-    st.title("Euphoria CSV Analytics")
+    st.title("Euphoria CSV Analytical Dashboard")
 
     tabs = st.tabs(["KPIs","Yearly Rank","Segments","Data Files"])
 
+    # KPIs
     with tabs[0]:
         st.header("Key Performance Indicators")
-        kpis = load_kpis()
-        if kpis.empty:
-            st.warning("No KPI data: please drop your CSVs under data_csvs/")
-        else:
-            choice = st.selectbox("Choose KPI", kpis["kpi"].unique())
-            st.dataframe(kpis[kpis["kpi"]==choice])
+        try:
+            kpis = load_kpis()
+        except FileNotFoundError as e:
+            st.warning(str(e))
+            return
+        choice = st.selectbox("Choose KPI", kpis["kpi"].unique())
+        st.dataframe(kpis[kpis["kpi"]==choice].reset_index(drop=True))
 
+    # Yearly Map
     with tabs[1]:
         st.header("Yearly Watch Rank")
-        year = st.selectbox("Year", list(range(datetime.now().year, datetime.now().year-10, -1)))
+        year = st.selectbox("Year",
+            list(range(datetime.now().year, datetime.now().year-10, -1))
+        )
         fig = update_year(year)
         st.plotly_chart(fig, use_container_width=True)
-    # ── Buyer Segments tab ────────────────────────────────────────────────────
-    # ── Tab 2: Buyer Segments
-    # … after your KPI and Yearly‐rank tabs …
+
+    # Segments
     with tabs[2]:
         st.header("Buyer Segments (Authentic Mahiman Trophy)")
         if st.button("Compute Segments"):
             try:
-                coords, full_df, summary, centers = compute_trophy_segments()
+                coords, df_seg, summary, centers = compute_trophy_segments()
             except FileNotFoundError as e:
                 st.error(str(e))
-            else:
-                if full_df.empty:
-                    st.warning("No trophy‐customer records found.")
-                else:
-                    st.dataframe(summary)
-                    fig = px.scatter(
-                        coords,
-                        x="Dim1",
-                        y="Dim2",
-                        color="cluster",
-                        title="Trophy Buyer Segments"
-                    )
-                    fig.add_scatter(
-                        x=centers[:, 0],
-                        y=centers[:, 1],
-                        mode="markers",
-                        marker=dict(symbol="x", size=12, color="black"),
-                        name="Centroids"
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
+                return
+            if df_seg.empty:
+                st.warning("No trophy customers found in your CSVs.")
+                return
+
+            st.dataframe(summary)
+            fig = px.scatter(coords, x="Dim1", y="Dim2", color="cluster",
+                             title="MCA + KMeans on Trophy Buyers")
+            fig.add_scatter(x=centers[:,0], y=centers[:,1],
+                            mode="markers", marker=dict(symbol="x",size=12),
+                            name="Centroids")
+            st.plotly_chart(fig, use_container_width=True)
+
+    # list files
+    with tabs[3]:
+        st.header("Data Files")
+        st.write("`data_csvs/`:", [p.name for p in DATA_DIR.iterdir()])
+        st.write("`data_csvs/trophy/`:", [p.name for p in TROPHY_DIR.iterdir()])
 
 if __name__=="__main__":
     main()
