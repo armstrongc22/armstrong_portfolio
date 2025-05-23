@@ -53,19 +53,13 @@ projects = [
 cols = st.columns(2, gap="large")
 for idx, project in enumerate(projects):
     col = cols[idx % 2]
-    thumb_path = project["thumb"]
-
-    # DEBUG: does the file actually exist?
-    if not thumb_path.exists():
-        col.error(f"❌ Image not found: `{thumb_path.name}`\nLooking in: `{thumb_path.parent}`")
+    thumb = project["thumb"]
+    if not thumb.exists():
+        col.error(f"❌ Image not found: {thumb.name}")
         continue
 
-    # Streamlit wants a string for a local path
-    col.image(str(thumb_path), use_column_width=True)
-    col.markdown(       f"""
-        <a href="{proj['url']}" target="_blank" style="text-decoration:none">
-          <img src="file://{proj['thumb']!s}" 
-               style="width:100%; border-radius:8px; box-shadow:2px 2px 8px rgba(0,0,0,0.2);" />
-          <h3 style="text-align:center; margin-top:0.5em; color:#333;">{proj['name']}</h3>
-        </a>
-        """,)
+    # 1) show the thumbnail
+    col.image(str(thumb), use_container_width=True)
+
+    # 2) make the title itself a hyperlink
+    col.markdown(f"[**{project['name']}**]({project['url']})")
