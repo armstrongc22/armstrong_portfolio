@@ -15,11 +15,10 @@ DATA_DIR = Path("data_csvs")
 # ── Utility: load all versioned CSVs for a topic ────────────────────────────
 def load_topic_csvs(topic: str, data_dir: Path = DATA_DIR) -> pd.DataFrame:
     """
-    Concatenate all files named <topic><N>.csv in data_dir, sorted by N.
+    Concatenate all files named <topic>* .csv in data_dir, sorted by filename.
     Raises FileNotFoundError if none or all are empty.
     """
-    pattern = f"{topic}" + "*" + ".csv"
-    files = sorted(data_dir.glob(pattern))
+    files = sorted(data_dir.glob(f"{topic}*.csv"))
     if not files:
         raise FileNotFoundError(f"No CSVs found for topic '{topic}' in {data_dir}")
     dfs = []
@@ -31,7 +30,7 @@ def load_topic_csvs(topic: str, data_dir: Path = DATA_DIR) -> pd.DataFrame:
         except pd.errors.EmptyDataError:
             continue
     if not dfs:
-        raise FileNotFoundError(f"All CSVs for '{topic}' are empty")
+        raise FileNotFoundError(f"All CSVs for topic '{topic}' are empty")
     return pd.concat(dfs, ignore_index=True)
 
 # ── KPI loader ─────────────────────────────────────────────────────────────
@@ -102,19 +101,18 @@ def load_kpis() -> pd.DataFrame:
     )
     sg['kpi'] = 'Top 2 Most-Streamed Games'
 
-    # Combine
-    kpis = pd.concat([
+    # Combine all KPI tables
+    return pd.concat([
         viewed[['kpi','label','value']],
         purchased[['kpi','label','value']],
         streamer[['kpi','label','value']],
         best_games[['kpi','label','value']],
         sg[['kpi','label','value']]
     ], ignore_index=True)
-    return kpis
 
 # ── Yearly watch rank ──────────────────────────────────────────────────────
 @st.cache_data
-def update_year(y: int) -> px.choropleth:
+def update_year(y: int):
     """
     Build a choropleth of watch-hours percent rank for year y.
     """
@@ -159,35 +157,37 @@ def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
     if df.empty:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), []
 
-    df['age'] = ((pd.to_datetime('today') - pd.to_datetime(df['birthday'], errors='coerce')).dt.days // 365)
+    # Compute age and drop missing
+    df['age'] = ((pd.to_datetime('today') - pd.to_datetime(df['birthday'], errors='coerce'))
+                 .dt.days // 365)
     df = df[['customer_id','age','gender','region']].dropna().head(sample_limit)
     if df.empty:
         return pd.DataFrame(), df, pd.DataFrame(), []
 
+    # Age bins
     df['age_bin'] = pd.cut(
         df['age'], bins=range(10,81,5),
-        labels=[f"{i}-{i+4}" for i in range(10,80,5)],
-        right=False
+        labels=[f"{i}-{i+4}" for i in range(10,80,5)], right=False
     )
     df = df.dropna(subset=['age_bin'])
-    coords_arr = prince.MCA(n_components=2, random_state=42).fit_transform(
-        df[['age_bin','gender','region']].astype(str)
-    )
+
+    # MCA transformation
+    coords_arr = prince.MCA(n_components=2, random_state=42)
+                 .fit_transform(df[['age_bin','gender','region']].astype(str))
     coords_df = pd.DataFrame(coords_arr, columns=['Dim1','Dim2'], index=df.index)
 
+    # KMeans clustering
     km = KMeans(n_clusters=k, random_state=42)
     df_clean = coords_df.dropna()
     if df_clean.empty:
         return coords_df, df, pd.DataFrame(), []
-    labels = km.fit_predict(df_clean[['Dim1','Dim2']])
-    df_clean['cluster'] = labels
+    df_clean['cluster'] = km.fit_predict(df_clean[['Dim1','Dim2']])
 
     coords_df['cluster'] = df_clean['cluster']
     df['cluster'] = coords_df['cluster'].astype(int)
 
     summary = df_clean.groupby('cluster').agg(
-        size=('cluster','count'),
-        avg_dim1=('Dim1','mean')
+        size=('cluster','count'), avg_dim1=('Dim1','mean')
     ).reset_index()
     centers = km.cluster_centers_
     return coords_df, df, summary, centers
@@ -214,29 +214,30 @@ def main():
     # Yearly Rank
     with tabs[1]:
         st.header("Yearly Watch Rank")
-        year_opts = list(range(datetime.now().year, datetime.now().year-10, -1))
-        year = st.selectbox("Year", year_opts)
+        years = list(range(datetime.now().year, datetime.now().year-10, -1))
+        year = st.selectbox("Select Year", years)
         fig = update_year(year)
         st.plotly_chart(fig, use_container_width=True)
 
     # Buyer Segments
     with tabs[2]:
-        st.header("Buyer Segments (Trophy Purchasers)")
+        st.header("Buyer Segments (Authentic Mahiman Trophy)")
         if st.button("Compute Segments"):
-            coords, full, summary, centers = compute_trophy_segments()
+            with st.spinner("Running MCA + KMeans..."):
+                coords, full, summary, centers = compute_trophy_segments()
             if full.empty:
-                st.warning("No trophy-purchase data. Check `purchase_events_topic*.csv` & `customers_topic*.csv` files.")
+                st.warning("No trophy-purchase data found. Ensure CSVs loaded.")
             else:
                 st.dataframe(summary)
-                fig = px.scatter(coords, x='Dim1', y='Dim2', color='cluster')
-                if len(centers):
+                fig = px.scatter(coords, x='Dim1', y='Dim2', color='cluster', title="Trophy Buyer Segments")
+                if centers:
                     fig.add_scatter(x=centers[:,0], y=centers[:,1], mode='markers', marker=dict(symbol='x', size=12))
                 st.plotly_chart(fig, use_container_width=True)
 
     # Data Files
     with tabs[3]:
         st.header("Available CSV Files")
-        files = [p.name for p in DATA_DIR.glob("*.csv")]
+        files = sorted([p.name for p in DATA_DIR.glob("*.csv")])
         if files:
             st.write(files)
         else:
@@ -244,4 +245,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
