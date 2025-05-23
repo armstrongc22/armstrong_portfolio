@@ -33,21 +33,20 @@ def load_topic_csvs(topic: str) -> pd.DataFrame:
         return pd.concat(dfs, ignore_index=True)
     return pd.DataFrame()
 
+@st.cache_data
 def load_trophy_customers() -> pd.DataFrame:
-    """
-    Load all files trophy_customers_part*.csv under data_csvs/trophy/,
-    concat them, and return the full DataFrame of customers.
-    """
     parts = sorted(TROPHY_DIR.glob("trophy_customers_part*.csv"))
     if not parts:
-        raise FileNotFoundError(f"No trophy CSV parts in {TROPHY_DIR}")
+        raise FileNotFoundError(
+            f"No trophy CSVs in {TROPHY_DIR}; expected trophy_customers_part1.csv, part2.csv"
+        )
     dfs = []
-    for f in parts:
-        df = pd.read_csv(f)
+    for p in parts:
+        df = pd.read_csv(p)
         if not df.empty:
             dfs.append(df)
     if not dfs:
-        raise FileNotFoundError("All trophy customer parts are empty")
+        raise FileNotFoundError("All trophy CSVs are empty")
     return pd.concat(dfs, ignore_index=True)
 
 # ── 1) KPI loader ─────────────────────────────────────────────────────────────
@@ -159,58 +158,47 @@ def update_year(year: int):
 # ── 3) MCA + KMeans on Trophy Purchasers ──────────────────────────────────────
 import numpy as np
 
+
 @st.cache_data
-def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
-    # 1) load the two halves of your trophy customers
-    parts = sorted(TROPHY_DIR.glob("trophy_customers_part*.csv"))
-    if not parts:
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), np.empty((0,2))
-    cust = pd.concat((pd.read_csv(p) for p in parts), ignore_index=True)
-    if cust.empty:
-        return pd.DataFrame(), cust, pd.DataFrame(), np.empty((0,2))
-
-    # 2) compute age
-    cust["age"] = (
-        pd.to_datetime("today")
-        - pd.to_datetime(cust["birthday"], errors="coerce")
-    ).dt.days // 365
-    df = cust.dropna(subset=["age","gender","region"]).head(sample_limit)
-    if df.empty:
-        return pd.DataFrame(), df, pd.DataFrame(), np.empty((0,2))
-
-    # 3) bin age
+def compute_trophy_segments(n_clusters: int = 4):
+    df = load_trophy_customers()
+    # compute age from birthday
+    df["age"] = (
+            pd.to_datetime("today")
+            .tz_localize(None)
+            .sub(pd.to_datetime(df["birthday"], errors="coerce"))
+            .dt.days
+            // 365
+    )
+    df = df.dropna(subset=["age", "gender", "region"])
+    # bin age
     df["age_bin"] = pd.cut(
         df["age"],
-        bins=range(10,81,5),
-        labels=[f"{i}-{i+4}" for i in range(10,80,5)],
+        bins=range(10, 81, 5),
+        labels=[f"{i}-{i + 4}" for i in range(10, 80, 5)],
         right=False
-    ).astype(str)
-    df = df.dropna(subset=["age_bin"])
-    if df.empty:
-        return pd.DataFrame(), df, pd.DataFrame(), np.empty((0,2))
-
-    # 4) MCA
-    mca = prince.MCA(n_components=2, random_state=42)
-    coords_arr = mca.fit_transform(df[["age_bin","gender","region"]])
-    coords = pd.DataFrame(coords_arr, columns=["Dim1","Dim2"], index=df.index)
-
-    # 5) KMeans
-    clean = coords.dropna()
-    if clean.empty:
-        return coords, df, pd.DataFrame(), np.empty((0,2))
-    km = KMeans(n_clusters=k, random_state=42)
-    clean["cluster"] = km.fit_predict(clean)
-
-    coords["cluster"] = clean["cluster"]
-    df["cluster"] = coords["cluster"].fillna(-1).astype(int)
-
-    summary = (
-        clean.groupby("cluster")
-             .agg(size=("cluster","count"), avg_dim1=("Dim1","mean"))
-             .reset_index()
     )
-    return coords, df, summary, km.cluster_centers_
+    df = df.dropna(subset=["age_bin"])
 
+    # MCA to 2 dims
+    mca = prince.MCA(n_components=2, random_state=42)
+    coords_arr = mca.fit_transform(df[["age_bin", "gender", "region"]].astype(str))
+    coords = pd.DataFrame(coords_arr, columns=["Dim1", "Dim2"], index=df.index)
+
+    # KMeans
+    km = KMeans(n_clusters=n_clusters, random_state=42)
+    labels = km.fit_predict(coords)
+    coords["cluster"] = labels
+    df["cluster"] = labels
+
+    # summary
+    summary = (
+        coords.groupby("cluster")
+        .agg(size=("cluster", "count"), avg_dim1=("Dim1", "mean"))
+        .reset_index()
+    )
+
+    return coords, df, summary, km.cluster_centers_
 # ── Streamlit UI ─────────────────────────────────────────────────────────────
 def main():
     st.title("Euphoria CSV Analytics")
@@ -235,37 +223,32 @@ def main():
     # ── Tab 2: Buyer Segments
     # … after your KPI and Yearly‐rank tabs …
     with tabs[2]:
-        st.header("Buyer Segments (Mahiman Trophy)")
-        # after you call your compute function...
-        coords, df_seg, summary, centers = compute_trophy_segments()
-
-        if df_seg.empty:
-            st.warning("No trophy‐customer records found…")
-        else:
-            # merge cluster into coords
-            seg_df = coords.copy()
-            seg_df["cluster"] = df_seg["cluster"].values
-
-            st.dataframe(summary)
-
-            fig = px.scatter(
-                seg_df,
-                x="Dim1",
-                y="Dim2",
-                color="cluster",  # now this column exists
-                title="MCA + KMeans of Trophy Buyers",
-                labels={"cluster": "Segment"}
-            )
-            # overlay centroids
-            fig.add_scatter(
-                x=centers[:, 0],
-                y=centers[:, 1],
-                mode="markers",
-                marker=dict(symbol="x", size=12, color="black"),
-                name="Centroids"
-            )
-            st.plotly_chart(fig, use_container_width=True)
-
+        st.header("Buyer Segments (Authentic Mahiman Trophy)")
+        if st.button("Compute Segments"):
+            try:
+                coords, full_df, summary, centers = compute_trophy_segments()
+            except FileNotFoundError as e:
+                st.error(str(e))
+            else:
+                if full_df.empty:
+                    st.warning("No trophy‐customer records found.")
+                else:
+                    st.dataframe(summary)
+                    fig = px.scatter(
+                        coords,
+                        x="Dim1",
+                        y="Dim2",
+                        color="cluster",
+                        title="Trophy Buyer Segments"
+                    )
+                    fig.add_scatter(
+                        x=centers[:, 0],
+                        y=centers[:, 1],
+                        mode="markers",
+                        marker=dict(symbol="x", size=12, color="black"),
+                        name="Centroids"
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
 
 if __name__=="__main__":
     main()
