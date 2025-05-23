@@ -451,15 +451,35 @@ def main():
 
     with tabs[4]:
         st.header("Buyer Segments")
-        if df_seg_summary.empty:
-            st.write("No segment data. Sample Kafka topics first.")
+        # Initialize empty
+        coords_seg = pd.DataFrame()
+        df_seg = pd.DataFrame()
+        df_seg_summary = pd.DataFrame()
+        seg_centers = []
+
+        # Button to compute
+        if st.button("Compute Buyer Segments"):
+            with st.spinner("Running MCA + KMeans..."):
+                coords_seg, df_seg, df_seg_summary, seg_centers = compute_trophy_segments()
+
+        if df_seg.empty and df_seg_summary.empty:
+            st.warning(
+                "No trophy-purchase records found.
+                "
+                "• Ensure you sampled or pulled full purchase_events_topic and customers_topic.
+                "
+                "• Then click 'Compute Buyer Segments' to rerun."
+            )
         else:
             st.dataframe(df_seg_summary)
             fig = px.scatter(coords_seg, x='Dim1', y='Dim2', color='cluster')
             if len(seg_centers) > 0:
-                fig.add_scatter(x=seg_centers[:,0], y=seg_centers[:,1], mode='markers', marker=dict(symbol='x', size=12))
+                fig.add_scatter(
+                    x=seg_centers[:, 0], y=seg_centers[:, 1],
+                    mode='markers', marker=dict(symbol='x', size=12)
+                )
             st.plotly_chart(fig, use_container_width=True)
+    if __name__ == "__main__":
+        main()
 
-if __name__ == "__main__":
-    main()
 
