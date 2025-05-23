@@ -275,4 +275,27 @@ def main():
         try:
             st.plotly_chart(update_year(yr),use_container_width=True)
         except FileNotFoundError:
-            st.warning("Missing watch_topic.csv
+            st.warning(
+    """
+    Missing 'watch_topic.csv'. Sample data first.
+    """
+)
+    with tabs[4]:
+        st.header("Buyer Segments")
+        if 'seg' not in st.session_state: st.session_state.seg={'coords':pd.DataFrame(),'df':pd.DataFrame(),'summary':pd.DataFrame(),'centers':[]}
+        if st.button("Compute Segments"):
+            coords,df_s,summary,centers=compute_trophy_segments()
+            st.session_state.seg={'coords':coords,'df':df_s,'summary':summary,'centers':centers}
+        res=st.session_state.seg
+        if res['df'].empty:
+            st.warning(
+                "Missing trophy-purchase data. Pull full CSVs, then click Compute Segments."
+            )
+        else:
+            st.dataframe(res['summary'])
+            fig=px.scatter(res['coords'],x='Dim1',y='Dim2',color='cluster')
+            if len(res['centers']): fig.add_scatter(x=res['centers'][:,0],y=res['centers'][:,1],mode='markers',marker=dict(symbol='x',size=12))
+            st.plotly_chart(fig,use_container_width=True)
+
+if __name__=="__main__": main()
+csv
