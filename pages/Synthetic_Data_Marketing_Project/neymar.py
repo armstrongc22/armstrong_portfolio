@@ -135,7 +135,7 @@ def load_kpis() -> pd.DataFrame:
     return pd.concat([viewed[['kpi','label','value']], purchased[['kpi','label','value']], streamer[['kpi','label','value']], best_games[['kpi','label','value']], sg[['kpi','label','value']]], ignore_index=True)
 
 @st.cache_data
-
+```python
 # Compute MCA + KMeans segments for trophy buyers
 def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
     # Load purchase & customer CSVs
@@ -189,7 +189,7 @@ def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
     ).reset_index()
 
     return coords, df, summary, km.cluster_centers_
-
+```
 
 @st.cache_data
 def update_year(y: int):
@@ -274,10 +274,9 @@ def main():
             st.json(results)
         st.markdown("---")
         st.write("Data CSVs folder:")
-        st.write([p.name for p in DATA_DIR.iterdir()])("Data CSVs folder:")
         st.write([p.name for p in DATA_DIR.iterdir()])
 
-    with tabs[1]:
+    with tabs[1]:[1]:
         st.header("Live Watch (last 5 min)")
         if st.button("Refresh Live"):
             pass
@@ -312,5 +311,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
