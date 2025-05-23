@@ -19,8 +19,11 @@ st.markdown(
 )
 
 # ─── Card definitions ────────────────────────────────────────────────────────────
-BASE_DIR = Path(__file__).parent       # the folder containing home.py
+
+# this points at whatever folder home.py lives in
+BASE_DIR = Path(__file__).resolve().parent
 IMG_DIR  = BASE_DIR / "images"
+
 # make sure you put your gradient thumbs next to this file (or adjust these paths)
 projects = [
     {
@@ -46,17 +49,23 @@ projects = [
 ]
 
 # ─── Render cards in a 2×2 grid ─────────────────────────────────────────────────
+# ─── Render them in two columns ─────────────────────────────────────────────────
 cols = st.columns(2, gap="large")
-for idx, proj in enumerate(projects):
+for idx, project in enumerate(projects):
     col = cols[idx % 2]
-    # clickable image + caption
-    col.markdown(
-        f"""
+    thumb_path = project["thumb"]
+
+    # DEBUG: does the file actually exist?
+    if not thumb_path.exists():
+        col.error(f"❌ Image not found: `{thumb_path.name}`\nLooking in: `{thumb_path.parent}`")
+        continue
+
+    # Streamlit wants a string for a local path
+    col.image(str(thumb_path), use_column_width=True)
+    col.markdown(       f"""
         <a href="{proj['url']}" target="_blank" style="text-decoration:none">
           <img src="file://{proj['thumb']!s}" 
                style="width:100%; border-radius:8px; box-shadow:2px 2px 8px rgba(0,0,0,0.2);" />
           <h3 style="text-align:center; margin-top:0.5em; color:#333;">{proj['name']}</h3>
         </a>
-        """,
-        unsafe_allow_html=True,
-    )
+        """,)
