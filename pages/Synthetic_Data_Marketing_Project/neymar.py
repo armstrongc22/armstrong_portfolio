@@ -356,7 +356,6 @@ def update_live():
 
 # ── Streamlit app UI ─────────────────────────────────────────────────────────
 def main():
-    st.set_page_config(page_title="Euphoria Analytical Dashboard", layout="wide")
     st.title("Euphoria Analytical Dashboard")
 
     # Load KPI data (CSV)
@@ -378,14 +377,13 @@ def main():
     tabs = st.tabs(["Data Sampling", "Live Watch", "KPIs", "Yearly Rank", "Segments"])
 
     with tabs[0]:
-        st.header("Kafka → CSV Sampling")
+        st.header("Kafka → CSV Sampling & CSV Management")
 
-        # 1) Sample a random 99MB slice of each topic
-        if st.button("Sample Kafka Topics to CSVs"):
+        # 1) Sample ~99MB slice per topic
+        if st.button("Sample Kafka Topics to CSVs (~99MB each)  "):
             topics = [
-                'watch_topic', 'purchase_events_topic',
-                'streams_topic', 'partners_topic',
-                'games_topic', 'customers_topic'
+                'watch_topic','purchase_events_topic','streams_topic',
+                'partners_topic','games_topic','customers_topic'
             ]
             results = {}
             from confluent_kafka import KafkaException
@@ -399,36 +397,36 @@ def main():
                     results[t] = {'error': str(e)}
             st.json(results)
 
-        # 2) Pull full purchase & customer data for accurate segments
-        if st.button("Pull Full Purchase & Customer CSVs (for segments)"):
-            from confluent_kafka import KafkaException
-            full_paths = {}
-            for t in ["purchase_events_topic", "customers_topic"]:
+        # 2) Pull full purchase & customer topics for segments
+        if st.button("Pull Full Purchase & Customer CSVs (complete)"):
+            full_results = {}
+            for t in ['purchase_events_topic','customers_topic']:
                 try:
                     path = load_full_topic_to_csv(t)
-                    full_paths[t] = str(path)
+                    full_results[t] = str(path)
                 except Exception as e:
-                    full_paths[t] = f"Error: {e}"
-            st.json(full_paths)
+                    full_results[t] = f"Error: {e}"
+            st.json(full_results)
 
-        # 3) Chunk every topic CSV to ~40MB parts for GitHub
-        if st.button("Chunk all topic CSVs to ~40MB parts"):
-            topic_list = [p.stem for p in DATA_DIR.glob("*_topic.csv")]
-            chunks = {}
-            for t in topic_list:
+        # 3) Chunk existing CSVs into ~40MB parts for GitHub
+        if st.button("Chunk All CSVs to ~40MB"):
+            chunk_results = {}
+            for p in DATA_DIR.glob("*_topic.csv"):
+                topic = p.stem
                 try:
-                    df = load_topic_csv(t)
-                    parts = chunk_df_to_size(df, t)
-                    chunks[t] = [str(p) for p in parts]
+                    df = load_topic_csv(topic)
+                    parts = chunk_df_to_size(df, topic)
+                    chunk_results[topic] = [str(x) for x in parts]
                 except Exception as e:
-                    chunks[t] = [f"Error: {e}"]
-            st.json(chunks)
+                    chunk_results[topic] = f"Error: {e}"
+            st.json(chunk_results)
 
         st.markdown("---")
-        st.write("Data CSVs folder:")
-        st.write([p.name for p in DATA_DIR.iterdir()])
+        st.write("**Current CSV files in data_csvs/**")
+        st.write([x.name for x in DATA_DIR.iterdir()])
 
     with tabs[1]:
+
 
         st.header("Live Watch (last 5 min)")
         if st.button("Refresh Live"):
@@ -464,5 +462,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
