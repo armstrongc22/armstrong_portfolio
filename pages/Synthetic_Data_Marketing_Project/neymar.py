@@ -9,7 +9,7 @@ from datetime import datetime
 # ── CONFIG ────────────────────────────────────────────────────────────────────
 st.set_page_config(page_title="Euphoria CSV Dashboard", layout="wide")
 DATA_DIR = Path(__file__).parent / "data_csvs"
-
+TROPHY_DIR = DATA_DIR / "trophy"
 # ── UTILITY: load any CSVs matching base name ─────────────────────────────────
 def load_topic_csvs(topic: str) -> pd.DataFrame:
     """
@@ -31,6 +31,23 @@ def load_topic_csvs(topic: str) -> pd.DataFrame:
     if dfs:
         return pd.concat(dfs, ignore_index=True)
     return pd.DataFrame()
+
+def load_trophy_customers() -> pd.DataFrame:
+    """
+    Load all files trophy_customers_part*.csv under data_csvs/trophy/,
+    concat them, and return the full DataFrame of customers.
+    """
+    parts = sorted(TROPHY_DIR.glob("trophy_customers_part*.csv"))
+    if not parts:
+        raise FileNotFoundError(f"No trophy CSV parts in {TROPHY_DIR}")
+    dfs = []
+    for f in parts:
+        df = pd.read_csv(f)
+        if not df.empty:
+            dfs.append(df)
+    if not dfs:
+        raise FileNotFoundError("All trophy customer parts are empty")
+    return pd.concat(dfs, ignore_index=True)
 
 # ── 1) KPI loader ─────────────────────────────────────────────────────────────
 @st.cache_data
@@ -140,34 +157,23 @@ def update_year(year: int):
 
 # ── 3) MCA + KMeans on Trophy Purchasers ──────────────────────────────────────
 @st.cache_data
-def compute_trophy_segments(sample_limit: int=50000, k: int=4):
-    purchase  = load_topic_csvs("purchase_events")
-    customers = load_topic_csvs("customers")
-
-    if purchase.empty or customers.empty:
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), []
-
-    df = purchase.merge(customers, on="customer_id", how="inner")
-    df = df[df.product_name=="Authentic Mahiman Trophy"].copy()
+def compute_segments(sample_limit: int = 50000, n_clusters: int = 4):
+    dfcust = load_trophy_customers()
+    # compute age
+    dfcust["age"] = (
+        pd.to_datetime("today")
+        - pd.to_datetime(dfcust["birthday"], errors="coerce")
+    ).dt.days // 365
+    df = dfcust[["customer_id","age","gender","region"]].dropna().head(sample_limit)
     if df.empty:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), []
 
-    # compute age & drop NA
-    df["age"] = ((pd.to_datetime("today") -
-                  pd.to_datetime(df["birthday"], errors="coerce"))
-                 .dt.days // 365)
-    df = df[["customer_id","age","gender","region"]].dropna().head(sample_limit)
-    if df.empty:
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), []
-
-    # age bins
-    df["age_bin"] = pd.cut(df["age"],
-                          bins=range(10,81,5),
-                          labels=[f"{i}-{i+4}" for i in range(10,80,5)],
-                          right=False)
-    df = df.dropna(subset=["age_bin"])
-    if df.empty:
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), []
+    # bin age
+    df["age_bin"] = pd.cut(
+        df["age"], bins=range(10,81,5),
+        labels=[f"{i}-{i+4}" for i in range(10,80,5)],
+        right=False
+    ).dropna()
 
     # MCA
     mca = prince.MCA(n_components=2, random_state=42)
@@ -176,13 +182,10 @@ def compute_trophy_segments(sample_limit: int=50000, k: int=4):
 
     # KMeans
     clean = coords.dropna()
-    if clean.empty:
-        return coords, df, pd.DataFrame(), []
-    km = KMeans(n_clusters=k, random_state=42).fit(clean)
+    km = KMeans(n_clusters=n_clusters, random_state=42).fit(clean)
     clean["cluster"] = km.labels_
-
     coords["cluster"] = clean["cluster"]
-    df["cluster"]     = coords["cluster"].astype(int)
+    df["cluster"] = coords["cluster"].astype(int)
 
     summary = (
         clean.groupby("cluster")
@@ -190,7 +193,6 @@ def compute_trophy_segments(sample_limit: int=50000, k: int=4):
              .reset_index()
     )
     return coords, df, summary, km.cluster_centers_
-
 # ── Streamlit UI ─────────────────────────────────────────────────────────────
 def main():
     st.title("Euphoria CSV Analytics")
