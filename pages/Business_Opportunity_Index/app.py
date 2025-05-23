@@ -21,6 +21,11 @@ thresh = st.slider(
 )
 
 # ── 3  Query the joined table (hex_opportunity) ─────────────────────────
+hex_df = bq.read_sql("hex_opportunity")
+hex_df = hex_df[
+    (hex_df.city == city) &
+    (hex_df.local_opportunity >= thresh)
+]
 hex_df = bq.read_sql(f"""
     SELECT hex, popularity, local_opportunity
     FROM `{cfg.PROJECT}.{cfg.DATASET}.hex_opportunity`
