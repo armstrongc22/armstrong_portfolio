@@ -171,7 +171,7 @@ def compute_trophy_segments(sample_limit:int=50000, k:int=4):
         return pd.DataFrame(), cust, pd.DataFrame(), np.empty((0,2))
 
     # filter purchase_events for trophy
-    purchase = read_csv("purchase_events")
+    purchase = pd.ead_csv("purchase_events")
     trophy_p = purchase[purchase.product_name == "Authentic Mahiman Trophy"]
     if trophy_p.empty:
         return pd.DataFrame(), trophy_p, pd.DataFrame(), np.empty((0,2))
