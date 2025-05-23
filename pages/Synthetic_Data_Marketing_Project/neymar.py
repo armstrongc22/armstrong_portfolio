@@ -164,12 +164,13 @@ def compute_trophy_segments(n_clusters: int = 4):
     df = load_trophy_customers()
     # compute age from birthday
     df["age"] = (
-            pd.to_datetime("today")
-            .tz_localize(None)
-            .sub(pd.to_datetime(df["birthday"], errors="coerce"))
+            (pd.Timestamp.now()
+             - pd.to_datetime(df["birthday"], errors="coerce")
+             )
             .dt.days
             // 365
     )
+
     df = df.dropna(subset=["age", "gender", "region"])
     # bin age
     df["age_bin"] = pd.cut(
