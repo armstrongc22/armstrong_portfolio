@@ -109,7 +109,6 @@ def load_kpis() -> pd.DataFrame:
     # … validation …
     watch    = load_topic_csv("watch_topic")
     purchase = load_topic_csv("purchase_events_topic")
-    streams  = load_topic_csv("stream_topic")
     streams  = load_topic_csv("streams_topic")
     partners = load_topic_csv("partners_topic")
     games    = load_topic_csv("games_topic")
