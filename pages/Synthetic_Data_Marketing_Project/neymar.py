@@ -215,9 +215,9 @@ def main():
         st.plotly_chart(fig, use_container_width=True)
     with tabs[2]:
          st.header("Buyer Segments (Authentic Mahiman Trophy)")
-    if st.button("Compute Segments"):
+        if st.button("Compute Segments"):
          coords, full, summary, centers = compute_segments()
-            if full.empty:
+        if full.empty:
                 st.warning("No trophy purchasers found in your CSVs.")
             else:
                 st.dataframe(summary)
