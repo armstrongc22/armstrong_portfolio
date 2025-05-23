@@ -40,11 +40,11 @@ def load_kpis() -> pd.DataFrame:
     Load and compute KPI table from CSVs.
     """
     # Load source tables
-    watch = load_topic_csvs("watch_topic")
-    purchase = load_topic_csvs("purchase_events_topic")
-    streams = load_topic_csvs("streams_topic")
-    partners = load_topic_csvs("partners_topic")
-    games = load_topic_csvs("games_topic")
+    watch = load_topic_csvs("watch")
+    purchase = load_topic_csvs("purchase_events")
+    streams = load_topic_csvs("streams")
+    partners = load_topic_csvs("partners")
+    games = load_topic_csvs("games")
 
     # Top 10 viewed countries
     viewed = (
@@ -116,7 +116,7 @@ def update_year(y: int):
     """
     Build a choropleth of watch-hours percent rank for year y.
     """
-    watch = load_topic_csvs("watch_topic")
+    watch = load_topic_csvs("watch")
     watch['date'] = pd.to_datetime(watch['date'], errors='coerce')
     df_year = watch[watch['date'].dt.year == y]
     if df_year.empty:
@@ -150,8 +150,8 @@ def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
     Perform MCA + KMeans on trophy purchasers.
     Returns coords_df, full_df, summary_df, centers.
     """
-    purchase = load_topic_csvs("purchase_events_topic")
-    customers = load_topic_csvs("customers_topic")
+    purchase = load_topic_csvs("purchase_events")
+    customers = load_topic_csvs("customers")
     df = purchase.merge(customers, on='customer_id')
     df = df[df['product_name']=='Authentic Mahiman Trophy'].copy()
     if df.empty:
