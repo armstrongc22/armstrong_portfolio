@@ -185,6 +185,8 @@ def main():
         for col1, col2 in pairs:
             st.header(f"MCA: **{col1}** + **{col2}**")
             coords, i1, i2 = compute_mca_and_segments(df, col1, col2)
+            my_palette = ["#93329E", "#F4D03F", "#EA7600", "#8E44AD"]
+
             fig = px.scatter(
                 coords,
                 x='Dim1', y='Dim2',
@@ -194,9 +196,23 @@ def main():
                     'Dim1': f"Dim1 ({i1:.1f}% inertia)",
                     'Dim2': f"Dim2 ({i2:.1f}% inertia)",
                 },
+                color_discrete_sequence=my_palette,
+                template="plotly_dark",  # switch to a black background + light grid/text
                 render_mode='webgl'
             )
-            fig.update_traces(marker={'size': 3, 'opacity': 0.3})
+
+            # tighten up marker opacity & size if you like:
+            fig.update_traces(
+                marker=dict(size=4, opacity=0.6, line=dict(width=0))
+            )
+
+            # enforce full-on black canvas (optional — plotly_dark already does this)
+            fig.update_layout(
+                paper_bgcolor='black',
+                plot_bgcolor='black',
+                font_color='white'
+            )
+
             st.plotly_chart(fig, use_container_width=True)
             st.markdown("---")
 
