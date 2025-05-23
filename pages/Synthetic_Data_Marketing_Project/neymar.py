@@ -135,6 +135,7 @@ def load_kpis() -> pd.DataFrame:
     return pd.concat([viewed[['kpi','label','value']], purchased[['kpi','label','value']], streamer[['kpi','label','value']], best_games[['kpi','label','value']], sg[['kpi','label','value']]], ignore_index=True)
 
 @st.cache_data
+```python
 # Compute MCA + KMeans segments for trophy buyers
 def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
     # Load purchase & customer CSVs
@@ -188,16 +189,42 @@ def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
     ).reset_index()
 
     return coords, df, summary, km.cluster_centers_
+```
 
 @st.cache_data
+# Generate choropleth of watch hours by country for a given year
 def update_year(y: int):
-    watch = pd.read_csv(DATA_DIR / "watch_topic.csv")
-    watch['date'] = pd.to_datetime(watch['date'], utc=True, infer_datetime_format=True)
-    df = watch[watch.date.dt.year==y].groupby('country')['length'].sum().reset_index()
-    df['watch_hours'] = df.length/3600
-    df['pct_rank'] = df.watch_hours.rank(pct=True)
-    fig = px.choropleth(df, locations='country', locationmode='country names', color='pct_rank',
-                        hover_data={'watch_hours':':.1f','pct_rank':':.2f'}, color_continuous_scale='Viridis')
+    data_file = DATA_DIR / "watch_topic.csv"
+    if not data_file.exists():
+        raise FileNotFoundError(f"Missing watch CSV: {data_file}")
+
+    watch = pd.read_csv(data_file)
+    # Parse dates, coerce errors to NaT, then drop
+    watch['date'] = pd.to_datetime(watch['date'], utc=True, errors='coerce')
+    watch = watch.dropna(subset=['date'])
+
+    # Filter by year
+    df_year = watch[watch['date'].dt.year == y]
+    if df_year.empty:
+        # return empty figure
+        empty = pd.DataFrame({'country':[], 'watch_hours':[]})
+        fig = px.choropleth(empty, locations='country', color='watch_hours')
+        fig.update_layout(title=f"Yearly Watch Rank: {y} (no data)")
+        return fig
+
+    grouped = df_year.groupby('country', as_index=False)['length'].sum()
+    grouped['watch_hours'] = grouped['length'] / 3600.0
+    grouped['pct_rank'] = grouped['watch_hours'].rank(pct=True)
+
+    fig = px.choropleth(
+        grouped,
+        locations='country',
+        locationmode='country names',
+        color='pct_rank',
+        hover_data={'watch_hours':':.1f', 'pct_rank':':.2f'},
+        color_continuous_scale='Viridis',
+        range_color=(0,1)
+    )
     fig.update_layout(title=f"Yearly Watch Rank: {y}")
     return fig
 
