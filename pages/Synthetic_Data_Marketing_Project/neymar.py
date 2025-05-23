@@ -115,7 +115,8 @@ def update_year(y: int):
     df_year = watch[watch['date'].dt.year == y]
     if df_year.empty:
         st.warning(f"No data for year {y}")
-        return px.choropleth(pd.DataFrame(columns=['country','watch_hours']), locations='country', color='watch_hours')
+        empty = pd.DataFrame({'country':[], 'watch_hours':[]})
+        return px.choropleth(empty, locations='country', color='watch_hours')
 
     grouped = (
         df_year.groupby('country')['length']
@@ -130,7 +131,7 @@ def update_year(y: int):
         locations='country',
         locationmode='country names',
         color='pct_rank',
-        hover_data=['watch_hours','pct_rank'],
+        hover_data={'watch_hours':':.1f','pct_rank':':.2f'},
         color_continuous_scale='Viridis',
         range_color=(0,1)
     )
@@ -154,13 +155,14 @@ def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
 
     df['age_bin'] = pd.cut(df['age'], bins=range(10,81,5), labels=[f"{i}-{i+4}" for i in range(10,80,5)], right=False)
     df = df.dropna(subset=['age_bin'])
-    coords = prince.MCA(n_components=2, random_state=42).fit_transform(df[['age_bin','gender','region']])
-    coords_df = pd.DataFrame(coords, columns=['Dim1','Dim2'], index=df.index)
+    coords_arr = prince.MCA(n_components=2, random_state=42).fit_transform(df[['age_bin','gender','region']].astype(str))
+    coords_df = pd.DataFrame(coords_arr, columns=['Dim1','Dim2'], index=df.index)
 
     km = KMeans(n_clusters=k, random_state=42)
     df_clean = coords_df.dropna()
-    labels = km.fit_predict(df_clean)
-    df_clean['cluster'] = labels
+    if df_clean.empty:
+        return coords_df, df, pd.DataFrame(), []
+    df_clean['cluster'] = km.fit_predict(df_clean[['Dim1','Dim2']])
 
     coords_df['cluster'] = df_clean['cluster']
     df['cluster'] = coords_df['cluster'].astype(int)
@@ -174,8 +176,8 @@ def main():
     st.title("Euphoria Analytical Dashboard (CSV)")
     tabs = st.tabs(["KPIs","Yearly Rank","Buyer Segments","Data Files"])
 
-            with tabs[0]:
-        st.header(\"Key Performance Indicators\")
+    with tabs[0]:
+        st.header("Key Performance Indicators")
         try:
             df_kpi = load_kpis()
         except FileNotFoundError as e:
@@ -183,15 +185,15 @@ def main():
             df_kpi = pd.DataFrame()
 
         if df_kpi.empty:
-            st.write(\"No KPI data available. Please ensure your CSVs are loaded.\")
+            st.write("No KPI data available. Please ensure your CSVs are loaded.")
         else:
-            choice = st.selectbox(\"Select KPI\", df_kpi['kpi'].unique())
+            choice = st.selectbox("Select KPI", df_kpi['kpi'].unique())
             filtered = df_kpi[df_kpi['kpi'] == choice]
             st.dataframe(filtered)
 
-    with tabs[1]:」
+    with tabs[1]:
         st.header("Yearly Watch Map")
-        year = st.selectbox("Year", list(range(datetime.now().year, datetime.now().year-10, -1)))
+        year = st.selectbox("Year", list(range(datetime.now().year, datetime.now().year - 10, -1)))
         fig = update_year(year)
         st.plotly_chart(fig, use_container_width=True)
 
@@ -204,12 +206,13 @@ def main():
             else:
                 st.dataframe(summary)
                 fig = px.scatter(coords, x='Dim1', y='Dim2', color='cluster')
-                if len(centers): fig.add_scatter(x=centers[:,0], y=centers[:,1], mode='markers', marker=dict(symbol='x', size=12))
+                if len(centers):
+                    fig.add_scatter(x=centers[:,0], y=centers[:,1], mode='markers', marker=dict(symbol='x', size=12))
                 st.plotly_chart(fig, use_container_width=True)
 
     with tabs[3]:
         st.header("Data CSV Files")
-        st.write(list(DATA_DIR.glob("*.csv")))
+        st.write([str(p.name) for p in DATA_DIR.glob("*.csv")])
 
 if __name__ == "__main__":
     main()
