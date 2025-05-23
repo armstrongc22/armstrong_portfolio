@@ -257,8 +257,10 @@ def update_live():
 
 # ── Streamlit app UI ─────────────────────────────────────────────────────────
 def main():
+    # Title
     st.title("Euphoria Analytical Dashboard")
-    # KPI
+
+    # Load KPI data
     try:
         df_kpi = load_kpis()
     except FileNotFoundError as e:
@@ -268,69 +270,82 @@ def main():
     # Tabs
     tabs = st.tabs(["Data Sampling","Live Watch","KPIs","Yearly Rank","Segments"])
 
+    # Data Sampling tab
     with tabs[0]:
         st.header("Kafka → CSV Sampling & CSV Management")
         if st.button("Sample Kafka (99MB each)"):
             results = {t: sample_topic_to_size(t) for t in [
                 'watch_topic','purchase_events_topic','streams_topic',
                 'partners_topic','games_topic','customers_topic']}
-            st.json({k:{k2:str(v2) for k2,v2 in v.items()} for k,v in results.items()})
-        if st.button("Pull Full CSVs (purchase/customer)" ):
+            st.json({k:{subk:str(subv) for subk,subv in v.items()} for k,v in results.items()})
+        if st.button("Pull Full CSVs (purchase/customer)"):
             full = {t:str(load_full_topic_to_csv(t)) for t in ['purchase_events_topic','customers_topic']}
             st.json(full)
         if st.button("Chunk all CSVs (~40MB)"):
-            out = {p.stem:[str(x) for x in chunk_df_to_size(load_topic_csv(p.stem), p.stem)]
-                   for p in DATA_DIR.glob('*_topic.csv')}
+            out = {}
+            for p in DATA_DIR.glob('*_topic.csv'):
+                topic = p.stem
+                try:
+                    df = load_topic_csv(topic)
+                    parts = chunk_df_to_size(df, topic)
+                    out[topic] = [str(x) for x in parts]
+                except Exception as e:
+                    out[topic] = f"Error: {e}"
             st.json(out)
         st.markdown("---")
         st.write("**data_csvs/**:", [x.name for x in DATA_DIR.iterdir()])
 
+    # Live Watch tab
     with tabs[1]:
         st.header("Live Watch (last 5 min)")
         if st.button("Refresh Live"):
             pass
         st.plotly_chart(update_live(), use_container_width=True)
 
+    # KPI Dashboard tab
     with tabs[2]:
         st.header("Euphoria KPIs")
         if df_kpi.empty:
             st.write("No KPI data. Sample Kafka first.")
         else:
-            sel = st.selectbox("KPI", df_kpi.kpi.unique())
-            st.dataframe(df_kpi[df_kpi.kpi==sel])
+            kpi_choice = st.selectbox("Select KPI", df_kpi.kpi.unique())
+            st.dataframe(df_kpi[df_kpi.kpi == kpi_choice])
 
+    # Yearly Rank tab
     with tabs[3]:
         st.header("Yearly Watch Rank")
         years = list(range(datetime.now().year, datetime.now().year-10, -1))
         y = st.selectbox("Year", years)
-        if df_kpi.empty:
-            st.write("No watch data. Sample Kafka first.")
-        else:
-            st.plotly_chart(update_year(y), use_container_width=True)
+        try:
+            fig_year = update_year(y)
+            st.plotly_chart(fig_year, use_container_width=True)
+        except FileNotFoundError:
+            st.warning("Missing watch_topic.csv – sample Kafka first.")
 
+    # Segments tab
     with tabs[4]:
         st.header("Buyer Segments")
-        if 'seg' not in st.session_state:
-            st.session_state.seg = {'coords':pd.DataFrame(), 'df':pd.DataFrame(),
-                                     'summary':pd.DataFrame(), 'centers':[]}
+        if 'seg_results' not in st.session_state:
+            st.session_state.seg_results = {'coords':pd.DataFrame(), 'df':pd.DataFrame(), 'summary':pd.DataFrame(), 'centers':[]}
         if st.button("Compute Segments"):
-            coords, df_seg, summary, centers = compute_trophy_segments()
-            st.session_state.seg = {'coords':coords, 'df':df_seg,
-                                     'summary':summary, 'centers':centers}
-        res = st.session_state.seg
+            with st.spinner("Running MCA + KMeans..."):
+                coords, df_seg, summary, centers = compute_trophy_segments()
+                st.session_state.seg_results = {'coords':coords, 'df':df_seg, 'summary':summary, 'centers':centers}
+        res = st.session_state.seg_results
         if res['df'].empty:
             st.warning(
-                "No trophy-purchase records found.\n"
-                "• Pull full 'purchase_events_topic' and 'customers_topic'.\n"
+                "Missing trophy-purchase data.
+"
+                "• Pull full purchase_events_topic & customers_topic CSVs.
+"
                 "• Click 'Compute Segments' to rerun."
             )
         else:
             st.dataframe(res['summary'])
-            fig = px.scatter(res['coords'], x='Dim1', y='Dim2', color='cluster')
-            if len(res['centers']): fig.add_scatter(
-                x=res['centers'][:,0], y=res['centers'][:,1], mode='markers', marker=dict(symbol='x', size=12)
-            )
-            st.plotly_chart(fig, use_container_width=True)
+            fig_seg = px.scatter(res['coords'], x='Dim1', y='Dim2', color='cluster')
+            if len(res['centers']):
+                fig_seg.add_scatter(x=res['centers'][:,0], y=res['centers'][:,1], mode='markers', marker=dict(symbol='x', size=12))
+            st.plotly_chart(fig_seg, use_container_width=True)
 
 if __name__ == "__main__":
     main()
