@@ -420,7 +420,7 @@ with tabs[0]:
         st.write("**Current CSV files in data_csvs/**")
         st.write([x.name for x in DATA_DIR.iterdir()])
 
-    with tabs[1]:
+with tabs[1]:
 
 
         st.header("Live Watch (last 5 min)")
@@ -428,7 +428,7 @@ with tabs[0]:
             pass
         st.plotly_chart(update_live(), use_container_width=True)
 
-    with tabs[2]:
+with tabs[2]:
         st.header("Euphoria KPIs")
         if df_kpi.empty:
             st.write("No KPI data. Sample Kafka topics first.")
@@ -436,7 +436,7 @@ with tabs[0]:
             kpi = st.selectbox("Select KPI", df_kpi.kpi.unique())
             st.dataframe(df_kpi[df_kpi.kpi == kpi])
 
-    with tabs[3]:
+with tabs[3]:
         st.header("Yearly Watch Rank")
         year = st.selectbox("Year", list(range(datetime.now().year, datetime.now().year-10, -1)))
         if df_kpi.empty:
@@ -444,7 +444,7 @@ with tabs[0]:
         else:
             st.plotly_chart(update_year(year), use_container_width=True)
 
-    with tabs[4]:
+with tabs[4]:
         st.header("Buyer Segments")
         # Initialize empty
         coords_seg = pd.DataFrame()
