@@ -213,11 +213,10 @@ def main():
         year = st.selectbox("Year", list(range(datetime.now().year, datetime.now().year-10, -1)))
         fig = update_year(year)
         st.plotly_chart(fig, use_container_width=True)
-    # Segments
     with tabs[2]:
-        st.header("Buyer Segments (Authentic Mahiman Trophy)")
-        if st.button("Compute Segments"):
-            coords, full, summary, centers = compute_trophy_segments()
+         st.header("Buyer Segments (Authentic Mahiman Trophy)")
+    if st.button("Compute Segments"):
+         coords, full, summary, centers = compute_segments()
             if full.empty:
                 st.warning("No trophy purchasers found in your CSVs.")
             else:
