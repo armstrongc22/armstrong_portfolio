@@ -160,60 +160,54 @@ def update_year(year: int):
 import numpy as np
 
 @st.cache_data
-def compute_trophy_segments(sample_limit:int=50000, k:int=4):
-    # load trophy customer splits
+def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
+    # 1) Load your split trophy customer CSVs
     parts = sorted(TROPHY_DIR.glob("trophy_customers_part*.csv"))
     if not parts:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), np.empty((0,2))
 
-    cust = pd.concat([pd.read_csv(p) for p in parts], ignore_index=True)
+    cust = pd.concat((pd.read_csv(p) for p in parts), ignore_index=True)
     if cust.empty:
         return pd.DataFrame(), cust, pd.DataFrame(), np.empty((0,2))
 
-    # filter purchase_events for trophy
-    purchase = pd.read_csv("purchase_events.csv")
-    trophy_p = purchase[purchase.product_name == "Authentic Mahiman Trophy"]
-    if trophy_p.empty:
-        return pd.DataFrame(), trophy_p, pd.DataFrame(), np.empty((0,2))
+    # 2) Compute age, drop missing
+    cust["age"] = (
+        pd.to_datetime("today")
+        - pd.to_datetime(cust["birthday"], errors="coerce")
+    ).dt.days // 365
+    df = cust.dropna(subset=["age","gender","region"]).head(sample_limit)
 
-    # join to get demographics
-    df = trophy_p.merge(cust, on="customer_id", how="inner")
-    if df.empty:
-        return pd.DataFrame(), df, pd.DataFrame(), np.empty((0,2))
-
-    # age binning
-    df["age"] = ((pd.to_datetime("today") -
-                  pd.to_datetime(df["birthday"], errors="coerce"))
-                 .dt.days // 365)
-    df = df.dropna(subset=["age","gender","region"]).head(sample_limit)
+    # 3) Bin age into 5-year buckets
     df["age_bin"] = pd.cut(
         df["age"],
         bins=range(10,81,5),
         labels=[f"{i}-{i+4}" for i in range(10,80,5)],
         right=False
     ).astype(str)
+
     df = df.dropna(subset=["age_bin"])
     if df.empty:
         return pd.DataFrame(), df, pd.DataFrame(), np.empty((0,2))
 
-    # MCA
+    # 4) MCA on the three categorical columns
     mca = prince.MCA(n_components=2, random_state=42)
     coords_arr = mca.fit_transform(df[["age_bin","gender","region"]])
     coords = pd.DataFrame(coords_arr, columns=["Dim1","Dim2"], index=df.index)
 
-    coords_clean = coords.dropna()
-    if coords_clean.empty:
+    # 5) KMeans clustering
+    clean = coords.dropna()
+    if clean.empty:
         return coords, df, pd.DataFrame(), np.empty((0,2))
 
-    # KMeans
     km = KMeans(n_clusters=k, random_state=42)
-    km.fit(coords_clean)
-    coords_clean["cluster"] = km.labels_
+    clean["cluster"] = km.fit_predict(clean)
 
-    coords["cluster"] = coords_clean["cluster"]
-    df["cluster"]    = coords["cluster"].fillna(-1).astype(int)
+    # map clusters back
+    coords["cluster"] = clean["cluster"]
+    df["cluster"] = coords["cluster"].fillna(-1).astype(int)
 
-    summary = coords_clean.groupby("cluster").agg(
+    # 6) Summarize
+    summary = clean.groupby("cluster").agg(
         size     = ("cluster","count"),
         avg_dim1 = ("Dim1","mean")
     ).reset_index()
