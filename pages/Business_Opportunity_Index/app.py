@@ -21,7 +21,7 @@ thresh = st.slider(
 )
 
 # ── 3  Query the joined table (hex_opportunity) ─────────────────────────
-hex_df = bq.read_sql("hex_opportunity.csv")
+hex_df = bq.read_sql("hex_opportunity")
 st.write("RAW COLUMNS:", hex_df.columns.tolist())
 st.write("RAW PREVIEW:", hex_df.head())
 hex_df = hex_df[
