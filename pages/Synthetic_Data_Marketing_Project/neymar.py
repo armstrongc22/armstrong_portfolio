@@ -12,37 +12,35 @@ from confluent_kafka import Consumer, TopicPartition
 from sklearn.cluster import KMeans
 import streamlit as st
 
-# ── Directories ─────────────────────────────────────────────────────────────
+# ── Directory setup ─────────────────────────────────────────────────────────
 BASELINE_DIR = Path.cwd() / "baseline_samples"
 CHUNKS_DIR = Path.cwd() / "data_chunks"
 DATA_DIR = Path.cwd() / "data_csvs"
 for d in (BASELINE_DIR, CHUNKS_DIR, DATA_DIR):
     d.mkdir(exist_ok=True)
 
-# ── Kafka configurations ────────────────────────────────────────────────────
-SAMPLE_KAFKA_CONF = {
-    'bootstrap.servers':  os.getenv('CONFLUENT_BOOTSTRAP', ''),
-    'security.protocol':  'SASL_SSL',
-    'sasl.mechanisms':    'PLAIN',
-    'sasl.username':      os.getenv('CONFLUENT_API_KEY_SAMPLE', ''),
-    'sasl.password':      os.getenv('CONFLUENT_API_SECRET_SAMPLE', ''),
-    'group.id':           'streamlit-sample-group',
-    'auto.offset.reset':  'earliest',
-    'enable.auto.commit': False
-}
-LIVE_KAFKA_CONF = SAMPLE_KAFKA_CONF.copy()
-LIVE_KAFKA_CONF['group.id'] = 'streamlit-live-group'
-
-live_consumer = Consumer(LIVE_KAFKA_CONF)
-live_consumer.subscribe(["watch_live_topic"])
+# ── Kafka config from Streamlit secrets ──────────────────────────────────────
+def get_kafka_conf(group_id: str):
+    kc = st.secrets.get("kafka", {})
+    return {
+        'bootstrap.servers':  kc.get('servers', ''),
+        'security.protocol':  'SASL_SSL',
+        'sasl.mechanisms':    'PLAIN',
+        'sasl.username':      kc.get('username', ''),
+        'sasl.password':      kc.get('password', ''),
+        'group.id':           group_id,
+        'auto.offset.reset':  'earliest',
+        'enable.auto.commit': False
+    }
 
 # ── Sampling helper ──────────────────────────────────────────────────────────
 @st.cache_data
 def sample_topic_to_size(topic: str, target_mb: int = 99, max_partitions: int = 5) -> Path:
+    conf = get_kafka_conf('streamlit-sample-group')
     target_bytes = target_mb * 1024**2
-    consumer = Consumer(SAMPLE_KAFKA_CONF)
+    consumer = Consumer(conf)
     md = consumer.list_topics(topic, timeout=10.0)
-    parts = list(md.topics[topic].partitions.keys())[:max_partitions]
+    parts = list(md.topics.get(topic, {}).partitions.keys())[:max_partitions]
     random.shuffle(parts)
     records, bytes_accum = [], 0
     for p in parts:
@@ -80,7 +78,6 @@ def chunk_df_to_size(df: pd.DataFrame, prefix: str, chunk_mb: int = 40) -> list[
 # ── CSV-based analytics ─────────────────────────────────────────────────────
 @st.cache_data
 def load_kpis() -> pd.DataFrame:
-    # read CSVs
     watch = pd.read_csv(DATA_DIR / "watch_topic.csv")
     purchase = pd.read_csv(DATA_DIR / "purchase_events_topic.csv")
     streams = pd.read_csv(DATA_DIR / "streams_topic.csv")
@@ -88,24 +85,22 @@ def load_kpis() -> pd.DataFrame:
     games = pd.read_csv(DATA_DIR / "games_topic.csv")
     # compute
     viewed = watch.groupby('country')['length'].sum().nlargest(10).reset_index()
-    viewed['kpi'], viewed['value'] = 'Top 10 Viewed Countries', viewed['length'].astype(str)
+    viewed['kpi'], viewed['label'], viewed['value'] = 'Top 10 Viewed Countries', viewed['country'], viewed['length'].astype(str)
     purchased = purchase.groupby('product_name').size().nlargest(8).reset_index(name='count')
     purchased['kpi'], purchased['label'], purchased['value'] = 'Top 8 Purchased Products', purchased['product_name'], purchased['count'].astype(str)
     sp = streams.merge(partners, on='partner_id')
-    sp['score'] = (sp.viewers_total/sp.length.replace(0,1))*sp.comments_total
+    sp['score'] = (sp.viewers_total / sp.length.replace(0,1)) * sp.comments_total
     streamer = sp.groupby('screen_name')['score'].sum().nlargest(10).reset_index()
-    streamer['kpi'], streamer['value'] = 'Top 10 Streamer Performance', streamer['score'].round(2).astype(str)
+    streamer['kpi'], streamer['label'], streamer['value'] = 'Top 10 Streamer Performance', streamer['screen_name'], streamer['score'].round(2).astype(str)
     best_games = purchase[purchase.category=='game'].groupby('product_name').size().nlargest(2).reset_index(name='count')
-    best_games['kpi'], best_games['value'] = 'Top 2 Best-Selling Games', best_games['count'].astype(str)
+    best_games['kpi'], best_games['label'], best_games['value'] = 'Top 2 Best-Selling Games', best_games['product_name'], best_games['count'].astype(str)
     sg = streams.merge(games, on='game_id').groupby('title').size().nlargest(2).reset_index(name='count')
     sg['kpi'], sg['label'], sg['value'] = 'Top 2 Most-Streamed Games', sg['title'], sg['count'].astype(str)
-    dfs = [viewed[['kpi','country','value']].rename(columns={'country':'label'}),
-           purchased[['kpi','label','value']],
-           streamer[['kpi','screen_name','value']].rename(columns={'screen_name':'label'}),
-           best_games[['kpi','product_name','value']].rename(columns={'product_name':'label'}),
-           sg[['kpi','label','value']]]
-    df = pd.concat(dfs, ignore_index=True)
-    return df[['kpi','label','value']]
+    return pd.concat([viewed[['kpi','label','value']],
+                      purchased[['kpi','label','value']],
+                      streamer[['kpi','label','value']],
+                      best_games[['kpi','label','value']],
+                      sg[['kpi','label','value']]], ignore_index=True)
 
 @st.cache_data
 def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
@@ -120,8 +115,8 @@ def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
     coords = pd.DataFrame(mca.transform(df[['age_bin','gender','region']]), columns=['Dim1','Dim2'])
     km = KMeans(n_clusters=k, random_state=42).fit(coords)
     coords['cluster'] = km.labels_
-    df['cluster'] = coords['cluster']
-    summary = coords.groupby('cluster').agg(size=('cluster','count'), avg_age=('Dim1','mean')).reset_index()
+    df['cluster'] = coords.cluster
+    summary = coords.groupby('cluster').agg(size=('cluster','count'), avg_dim1=('Dim1','mean')).reset_index()
     return coords, df, summary, km.cluster_centers_
 
 @st.cache_data
@@ -137,9 +132,13 @@ def update_year(y: int):
     return fig
 
 def update_live():
-    for tp in live_consumer.assignment():
-        live_consumer.seek(TopicPartition(tp.topic, tp.partition, 0))
-    msgs = live_consumer.consume(num_messages=200, timeout=1.0)
+    conf = get_kafka_conf('streamlit-live-group')
+    consumer = Consumer(conf)
+    consumer.subscribe(["watch_live_topic"])
+    for tp in consumer.assignment():
+        consumer.seek(TopicPartition(tp.topic, tp.partition, 0))
+    msgs = consumer.consume(num_messages=200, timeout=1.0)
+    consumer.close()
     recs = []
     cutoff = datetime.now(timezone.utc) - timedelta(minutes=5)
     for m in msgs or []:
@@ -162,18 +161,18 @@ def main():
     st.title("Euphoria Analytical Dashboard")
     df_kpi = load_kpis()
     coords_seg, df_seg, df_seg_summary, seg_centers = compute_trophy_segments()
-    tabs = st.tabs(["Data Sampling", "Live Watch (5m)", "KPI Dashboard", "Yearly Rank", "Segments"])
+    tabs = st.tabs(["Data Sampling", "Live Watch", "KPIs", "Yearly Rank", "Segments"])
     with tabs[0]:
         st.header("Data Sampling")
         if st.button("Generate Baselines (~99MB)"):
-            topics = [f.stem for f in (DATA_DIR).glob("*_topic.csv")]
-            res = {t: sample_topic_to_size(t) for t in topics}
-            st.write(res)
-        topic = st.selectbox("Topic to chunk", [f.stem for f in DATA_DIR.glob("*_topic.csv")])
+            topics = [p.stem.replace('_topic','') for p in DATA_DIR.glob("*_topic.csv")]
+            res = {t: str(sample_topic_to_size(t)) for t in topics}
+            st.json(res)
+        topic = st.selectbox("Topic to chunk", [p.stem.replace('_topic','') for p in DATA_DIR.glob("*_topic.csv")])
         if st.button("Chunk to 40MB parts"):
-            df = pd.read_csv(DATA_DIR/f"{topic}.csv")
+            df = pd.read_csv(DATA_DIR / f"{topic}_topic.csv")
             parts = chunk_df_to_size(df, topic)
-            st.write(parts)
+            st.write([str(p) for p in parts])
     with tabs[1]:
         st.header("Live Watch (last 5 min)")
         if st.button("Refresh Live"):
@@ -196,3 +195,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
