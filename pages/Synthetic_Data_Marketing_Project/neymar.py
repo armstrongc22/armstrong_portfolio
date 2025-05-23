@@ -26,6 +26,41 @@ def try_read(path: Path) -> pd.DataFrame:
 def list_files(folder: Path, pattern: str):
     return sorted(folder.glob(pattern))
 
+@st.cache_data
+def load_trophy_customers():
+    parts = sorted(TROPHY_DIR.glob("trophy_customers_part*.csv"))
+    if not parts:
+        raise FileNotFoundError(f"No files matching trophy_customers_part*.csv in {TROPHY_DIR}")
+    df = pd.concat([pd.read_csv(p) for p in parts], ignore_index=True)
+    df['birthday'] = pd.to_datetime(df['birthday'], errors='coerce')
+    df = df.dropna(subset=['birthday']).copy()
+    df['age'] = ((pd.Timestamp.now() - df['birthday']).dt.days // 365).astype(int)
+    # 5-year bins
+    bins   = list(range(10,81,5))
+    labels = [f"{i}-{i+4}" for i in range(10,80,5)]
+    df['age_bin'] = pd.cut(df['age'], bins=bins, labels=labels, right=False)
+    # top-10 regions + Other
+    top10 = df['region'].value_counts().nlargest(10).index
+    df['region2'] = df['region'].where(df['region'].isin(top10), other='Other')
+    return df
+
+@st.cache_data
+def compute_mca_and_segments(df: pd.DataFrame, col1: str, col2: str, n_clusters: int = 4):
+    X = df[[col1, col2]].dropna().astype(str)
+    mca = prince.MCA(n_components=2, random_state=42).fit(X)
+    coords = mca.row_coordinates(X)
+    coords.columns = ['Dim1','Dim2']
+    coords.index   = X.index
+    # K-Means segments
+    km = KMeans(n_clusters=n_clusters, random_state=42).fit(coords)
+    coords['segment'] = km.labels_
+    # inertia percentages
+    eigs = mca.eigenvalues_
+    total = eigs.sum()
+    inertia1 = eigs[0]/total*100
+    inertia2 = eigs[1]/total*100
+    return coords, inertia1, inertia2
+
 # ── Main ─────────────────────────────────────────────────────────────────────
 def main():
     st.title("📊 Euphoria CSV Dashboard (fixed paths)")
@@ -137,34 +172,33 @@ def main():
 
     # Tab 4: Trophy Segments
     with tabs[3]:
-        st.header("Buyer Segments: Authentic Mahiman Trophy")
-        parts = list_files(TROPHY_DIR, "trophy_customers_part*.csv")
-        if not parts:
-            st.error("No trophy CSVs under data_csvs/trophy/")
-        else:
-            df = pd.concat([try_read(p) for p in parts], ignore_index=True)
-            st.write(f"Loaded {len(df)} total trophy rows.")
-            if st.button("Compute Segments") and not df.empty:
-                # MCA + KMeans
-                df["birthday"] = pd.to_datetime(df["birthday"], errors="coerce")
-                df["age"] = (pd.Timestamp.now() - df["birthday"]).dt.days // 365
-                clean = df.dropna(subset=["age","gender","region"])
-                clean["age_bin"] = pd.cut(clean["age"],
-                                          bins=range(10,81,5),
-                                          labels=[f"{i}-{i+4}" for i in range(10,80,5)],
-                                          right=False).astype(str)
-                coords = prince.MCA(n_components=2, random_state=42)\
-                             .fit_transform(clean[["age_bin","gender","region"]])
-                coords = pd.DataFrame(coords, columns=["Dim1","Dim2"], index=clean.index)
-                coords["cluster"] = KMeans(n_clusters=4, random_state=42).fit_predict(coords)
-                summary = (coords.groupby("cluster")
-                              .agg(size=("cluster","count"),
-                                   avg_dim1=("Dim1","mean"))
-                              .reset_index())
-                st.subheader("Segment summary")
-                st.dataframe(summary)
-                fig = px.scatter(coords, x="Dim1", y="Dim2", color="cluster")
-                st.plotly_chart(fig, use_container_width=True)
+        st.title("🏆 Euphoria Trophy Purchasers: MCA + Segments")
+        df = load_trophy_customers()
+        st.write(f"Loaded **{len(df):,}** trophy customers")
+        st.markdown("---")
+
+        pairs = [
+            ("age_bin", "gender"),
+            ("age_bin", "region2"),
+            ("gender", "region2"),
+        ]
+        for col1, col2 in pairs:
+            st.header(f"MCA: **{col1}** + **{col2}**")
+            coords, i1, i2 = compute_mca_and_segments(df, col1, col2)
+            fig = px.scatter(
+                coords,
+                x='Dim1', y='Dim2',
+                color='segment',
+                title=f"MCA: {col1} + {col2}",
+                labels={
+                    'Dim1': f"Dim1 ({i1:.1f}% inertia)",
+                    'Dim2': f"Dim2 ({i2:.1f}% inertia)",
+                },
+                render_mode='webgl'
+            )
+            fig.update_traces(marker={'size': 3, 'opacity': 0.3})
+            st.plotly_chart(fig, use_container_width=True)
+            st.markdown("---")
 
 if __name__ == "__main__":
     main()
