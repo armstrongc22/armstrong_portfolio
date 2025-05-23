@@ -479,6 +479,6 @@ def main():
                         mode='markers', marker=dict(symbol='x', size=12)
                     )
                 st.plotly_chart(fig, use_container_width=True)
-    if __name__ == "__main__":
-        main()
+ if __name__ == "__main__":
+    main()
 
