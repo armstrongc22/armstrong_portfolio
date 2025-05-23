@@ -172,8 +172,7 @@ def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
     df = df.dropna(subset=['age_bin'])
 
     # MCA transformation
-    coords_arr = prince.MCA(n_components=2, random_state=42)
-                 .fit_transform(df[['age_bin','gender','region']].astype(str))
+    coords_arr = prince.MCA(n_components=2, random_state=42).fit_transform(df[['age_bin','gender','region']].astype(str))
     coords_df = pd.DataFrame(coords_arr, columns=['Dim1','Dim2'], index=df.index)
 
     # KMeans clustering
