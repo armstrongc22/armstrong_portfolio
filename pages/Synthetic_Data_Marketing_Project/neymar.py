@@ -368,7 +368,7 @@ def main():
     # Load KPI data (CSV)
     try:
     # initialize KPI dataframe in case load_kpis() fails
-    df_kpi = pd.DataFrame()
+         df_kpi = pd.DataFrame()
 
     # Load KPI data (CSV)
     try:
