@@ -287,7 +287,7 @@ def main():
          df_kpi = pd.DataFrame()
 
     # Load KPI data (CSV)
-    try:
+    finally:
         df_kpi = load_kpis()
     except FileNotFoundError as e:
         df_kpi = pd.DataFrame()
