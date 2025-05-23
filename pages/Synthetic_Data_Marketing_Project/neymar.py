@@ -161,50 +161,50 @@ import numpy as np
 
 @st.cache_data
 def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
-    """
-    Loads the trophy‐customer CSVs that you split into two halves under
-    data_csvs/trophy/, merges with the full purchase_events, runs MCA + KMeans.
-    Returns coords_df, full_df, summary_df, centers (ndarray or empty).
-    """
-    # 1) Load the two halves of your trophy customer list
     trophy_dir = DATA_DIR / "trophy"
-    parts = sorted(trophy_dir.glob("trophy_customers_part*.csv"))
+    parts     = sorted(trophy_dir.glob("trophy_customers_part*.csv"))
     if not parts:
-        # no trophy CSVs found at all
+        # no split CSVs at all
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), np.empty((0,2))
 
+    # 1) load your two halves & concat
     cust = pd.concat([pd.read_csv(p) for p in parts], ignore_index=True)
     if cust.empty:
         return pd.DataFrame(), cust, pd.DataFrame(), np.empty((0,2))
 
-    # 2) Load the full purchases (you sampled) and filter for “Authentic Mahiman Trophy”
+    # 2) load full purchase_events and filter trophy
     purchase = pd.read_csv(DATA_DIR / "purchase_events.csv")
     trophy_purch = purchase[purchase.product_name == "Authentic Mahiman Trophy"]
     if trophy_purch.empty:
         return pd.DataFrame(), trophy_purch, pd.DataFrame(), np.empty((0,2))
 
-    # 3) Join them back to get demographics
+    # 3) join back to get demographics
     df = trophy_purch.merge(cust, on="customer_id", how="inner")
     if df.empty:
         return pd.DataFrame(), df, pd.DataFrame(), np.empty((0,2))
 
-    # 4) Derive age bins
-    df["age"] = ((pd.to_datetime("today") - pd.to_datetime(df["birthday"], errors="coerce"))
-                  .dt.days // 365)
+    # 4) compute age bins
+    df["age"] = ((pd.to_datetime("today") -
+                  pd.to_datetime(df["birthday"], errors="coerce"))
+                 .dt.days // 365)
     df = df.dropna(subset=["age","gender","region"]).head(sample_limit)
-    df["age_bin"] = pd.cut(df["age"], bins=range(10,81,5),
-                          labels=[f"{i}-{i+4}" for i in range(10,80,5)], right=False)
+    df["age_bin"] = pd.cut(
+        df["age"],
+        bins=range(10,81,5),
+        labels=[f"{i}-{i+4}" for i in range(10,80,5)],
+        right=False
+    )
     df = df.dropna(subset=["age_bin"])
     if df.empty:
         return pd.DataFrame(), df, pd.DataFrame(), np.empty((0,2))
 
-    # 5) MCA on age_bin, gender, region
-    df_mca = df[["age_bin","gender","region"]].astype(str)
+    # 5) MCA
+    X = df[["age_bin","gender","region"]].astype(str)
     mca = prince.MCA(n_components=2, random_state=42)
-    coords_arr = mca.fit_transform(df_mca)
+    coords_arr = mca.fit_transform(X)
     coords = pd.DataFrame(coords_arr, columns=["Dim1","Dim2"], index=df.index)
 
-    # 6) Guard against zero rows
+    # 6) drop NA rows
     coords_clean = coords.dropna()
     if coords_clean.shape[0] == 0:
         return coords, df, pd.DataFrame(), np.empty((0,2))
@@ -214,14 +214,14 @@ def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
     km.fit(coords_clean)
     coords_clean["cluster"] = km.labels_
 
-    # 8) Map clusters back
+    # 8) map clusters back
     coords["cluster"] = coords_clean["cluster"]
     df["cluster"]    = coords["cluster"].fillna(-1).astype(int)
 
-    # 9) Summary
+    # 9) summary
     summary = coords_clean.groupby("cluster").agg(
-        size=("cluster","count"),
-        avg_dim1=("Dim1","mean"),
+        size     = ("cluster","count"),
+        avg_dim1 = ("Dim1","mean")
     ).reset_index()
 
     return coords, df, summary, km.cluster_centers_
@@ -248,13 +248,15 @@ def main():
     # ── Buyer Segments tab ────────────────────────────────────────────────────
     with tabs[2]:
         st.header("Buyer Segments (Authentic Mahiman Trophy)")
-
         if st.button("Compute Segments"):
             coords, full, summary, centers = compute_trophy_segments()
-
             if full.empty or summary.empty:
                 st.warning(
-                    "No trophy purchasers found – check that you split and placed your CSVs in data_csvs/trophy/")
+                    "No trophy purchasers found — make sure:\n"
+                    "• your purchase_events.csv is up to date\n"
+                    "• you split your trophy_customers CSV into two parts\n"
+                    "• they live in data_csvs/trophy/"
+                )
             else:
                 st.dataframe(summary)
                 fig = px.scatter(coords, x="Dim1", y="Dim2", color="cluster")
