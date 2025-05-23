@@ -106,13 +106,14 @@ def load_topic_csv(topic: str) -> pd.DataFrame:
 # ── 3) CSV-based analytics ─────────────────────────────────────────────────
 @st.cache_data
 def load_kpis() -> pd.DataFrame:
-    files = {
-        'watch': 'watch_topic.csv',
-        'purchase': 'purchase_events_topic.csv',
-        'streams': 'streams_topic.csv',
-        'partners': 'partners_topic.csv',
-        'games': 'games_topic.csv'
-    }
+    # … validation …
+    watch    = load_topic_csv("watch_topic")
+    purchase = load_topic_csv("purchase_events_topic")
+    streams  = load_topic_csv("stream_topic")
+    streams  = load_topic_csv("streams_topic")
+    partners = load_topic_csv("partners_topic")
+    games    = load_topic_csv("games_topic")
+
     # Ensure all exist
     for f in files.values():
         if not (DATA_DIR / f).exists():
