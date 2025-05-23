@@ -211,21 +211,29 @@ def main():
         year = st.selectbox("Year", list(range(datetime.now().year, datetime.now().year-10, -1)))
         fig = update_year(year)
         st.plotly_chart(fig, use_container_width=True)
-
+    # Segments
     with tabs[2]:
         st.header("Buyer Segments (Authentic Mahiman Trophy)")
         if st.button("Compute Segments"):
             coords, full, summary, centers = compute_trophy_segments()
             if full.empty:
-                st.warning("No trophy buyers in your CSVs.")
+                st.warning("No trophy purchasers found in your CSVs.")
             else:
                 st.dataframe(summary)
-                fig = px.scatter(coords, x="Dim1", y="Dim2", color="cluster")
-                if len(centers):
-                    fig.add_scatter(x=centers[:,0], y=centers[:,1],
-                                    mode="markers",
-                                    marker=dict(symbol="x",size=12))
-                st.plotly_chart(fig, use_container_width=True)
+                # only plot if coords has the right columns
+                if {"Dim1","Dim2","cluster"}.issubset(coords.columns) and not coords.empty:
+                    dfp = coords.copy()
+                    dfp["cluster"] = dfp["cluster"].astype(str)
+                    fig = px.scatter(dfp, x="Dim1", y="Dim2", color="cluster")
+                    if len(centers):
+                        fig.add_scatter(
+                            x=centers[:,0], y=centers[:,1],
+                            mode="markers",
+                            marker=dict(symbol="x", size=12)
+                        )
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.warning("Segment coords incomplete; check your CSVs.")
 
     with tabs[3]:
         st.header("Detected CSV files")
