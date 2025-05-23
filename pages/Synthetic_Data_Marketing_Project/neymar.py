@@ -371,7 +371,7 @@ def main():
 
 tabs = st.tabs(["Data Sampling", "Live Watch", "KPIs", "Yearly Rank", "Segments"])
 
-    with tabs[0]:
+with tabs[0]:
         st.header("Kafka → CSV Sampling & CSV Management")
 
         # 1) Sample ~99MB slice per topic
