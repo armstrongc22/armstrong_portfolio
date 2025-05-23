@@ -88,7 +88,21 @@ def chunk_df_to_size(df: pd.DataFrame, prefix: str, chunk_mb: int = 40) -> list[
         part.to_csv(p, index=False)
         paths.append(p)
     return paths
-
+@st.cache_data
+def load_topic_csv(topic: str) -> pd.DataFrame:
+    """
+    Look first for chunked CSV parts in data_chunks/<topic>_part*.csv;
+    if none exist, fall back to the single data_csvs/<topic>.csv.
+    """
+    # 1) try chunked parts
+    parts = sorted(CHUNKS_DIR.glob(f"{topic}_part*.csv"))
+    if parts:
+        return pd.concat((pd.read_csv(p) for p in parts), ignore_index=True)
+    # 2) try single CSV
+    single = DATA_DIR / f"{topic}.csv"
+    if single.exists():
+        return pd.read_csv(single)
+    raise FileNotFoundError(f"No CSV found for topic `{topic}`")
 # ── 3) CSV-based analytics ─────────────────────────────────────────────────
 @st.cache_data
 def load_kpis() -> pd.DataFrame:
@@ -104,11 +118,11 @@ def load_kpis() -> pd.DataFrame:
         if not (DATA_DIR / f).exists():
             raise FileNotFoundError(f"Missing CSV: {f}")
 
-    watch = pd.read_csv(DATA_DIR / files['watch'])
-    purchase = pd.read_csv(DATA_DIR / files['purchase'])
-    streams = pd.read_csv(DATA_DIR / files['streams'])
-    partners = pd.read_csv(DATA_DIR / files['partners'])
-    games = pd.read_csv(DATA_DIR / files['games'])
+    watch = load_topic_csv("watch_topic")
+    purchase = load_topic_csv("purchase_topic")
+    streams = load_topic_csv("stream_topic")
+    partners = load_topic_csv("partners_topic")
+    games = load_topic_csv("games_topic")
 
     # Top 10 viewed
     viewed = watch.groupby('country')['length'].sum().nlargest(10).reset_index()
@@ -189,6 +203,7 @@ def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
     ).reset_index()
 
     return coords, df, summary, km.cluster_centers_
+
 
 
 @st.cache_data
