@@ -135,7 +135,7 @@ def load_kpis() -> pd.DataFrame:
     return pd.concat([viewed[['kpi','label','value']], purchased[['kpi','label','value']], streamer[['kpi','label','value']], best_games[['kpi','label','value']], sg[['kpi','label','value']]], ignore_index=True)
 
 @st.cache_data
-```python
+
 # Compute MCA + KMeans segments for trophy buyers
 def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
     # Load purchase & customer CSVs
