@@ -133,7 +133,7 @@ def load_kpis() -> pd.DataFrame:
 @st.cache_data
 def update_year(y: int):
     # note: use "watch_topic" not just "watch"
-    watch = load_topic_csvs("watch_topic")
+    watch = load_topic_csvs("watch")
     watch['date'] = pd.to_datetime(watch['date'], errors='coerce')
     df_year = watch[watch['date'].dt.year == y]
     if df_year.empty:
