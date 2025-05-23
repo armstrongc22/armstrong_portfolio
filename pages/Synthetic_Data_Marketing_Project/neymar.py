@@ -426,9 +426,10 @@ def main():
 
         st.markdown("---")
         st.write("Data CSVs folder:")
-        st.write([p.name for p in DATA_DIR.iterdir()")]}]}()])
+        st.write([p.name for p in DATA_DIR.iterdir()])
 
     with tabs[1]:
+
         st.header("Live Watch (last 5 min)")
         if st.button("Refresh Live"):
             pass
@@ -463,6 +464,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 if __name__ == "__main__":
