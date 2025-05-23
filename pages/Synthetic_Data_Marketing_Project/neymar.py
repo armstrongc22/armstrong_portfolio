@@ -103,6 +103,31 @@ def load_topic_csv(topic: str) -> pd.DataFrame:
     if single.exists():
         return pd.read_csv(single)
     raise FileNotFoundError(f"No CSV found for topic `{topic}`")
+
+@st.cache_data
+def load_full_topic_to_csv(topic: str) -> Path:
+    """
+    Consume every message from `topic` and write it to data_csvs/<topic>.csv
+    """
+    conf = get_kafka_conf('streamlit-full-group')
+    consumer = Consumer(conf)
+    consumer.subscribe([topic])
+
+    records = []
+    while True:
+        msg = consumer.poll(1.0)
+        if msg is None:  # no more messages
+            break
+        if msg.error():
+            continue
+        records.append(json.loads(msg.value()))
+
+    consumer.close()
+    df = pd.DataFrame(records)
+    path = DATA_DIR / f"{topic}.csv"
+    df.to_csv(path, index=False)
+    return path
+
 # ── 3) CSV-based analytics ─────────────────────────────────────────────────
 @st.cache_data
 def load_kpis() -> pd.DataFrame:
@@ -354,6 +379,8 @@ def main():
 
     with tabs[0]:
         st.header("Kafka → CSV Sampling")
+
+        # 1) Sample a random 99MB slice of each topic
         if st.button("Sample Kafka Topics to CSVs"):
             topics = [
                 'watch_topic', 'purchase_events_topic',
@@ -371,9 +398,35 @@ def main():
                 except Exception as e:
                     results[t] = {'error': str(e)}
             st.json(results)
+
+        # 2) Pull full purchase & customer data for accurate segments
+        if st.button("Pull Full Purchase & Customer CSVs (for segments)"):
+            from confluent_kafka import KafkaException
+            full_paths = {}
+            for t in ["purchase_events_topic", "customers_topic"]:
+                try:
+                    path = load_full_topic_to_csv(t)
+                    full_paths[t] = str(path)
+                except Exception as e:
+                    full_paths[t] = f"Error: {e}"
+            st.json(full_paths)
+
+        # 3) Chunk every topic CSV to ~40MB parts for GitHub
+        if st.button("Chunk all topic CSVs to ~40MB parts"):
+            topic_list = [p.stem for p in DATA_DIR.glob("*_topic.csv")]
+            chunks = {}
+            for t in topic_list:
+                try:
+                    df = load_topic_csv(t)
+                    parts = chunk_df_to_size(df, t)
+                    chunks[t] = [str(p) for p in parts]
+                except Exception as e:
+                    chunks[t] = [f"Error: {e}"]
+            st.json(chunks)
+
         st.markdown("---")
         st.write("Data CSVs folder:")
-        st.write([p.name for p in DATA_DIR.iterdir()])
+        st.write([p.name for p in DATA_DIR.iterdir()")]}]}()])
 
     with tabs[1]:
         st.header("Live Watch (last 5 min)")
@@ -407,6 +460,10 @@ def main():
             if len(seg_centers) > 0:
                 fig.add_scatter(x=seg_centers[:,0], y=seg_centers[:,1], mode='markers', marker=dict(symbol='x', size=12))
             st.plotly_chart(fig, use_container_width=True)
+
+if __name__ == "__main__":
+    main()
+
 
 if __name__ == "__main__":
     main()
