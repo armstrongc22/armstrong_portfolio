@@ -135,24 +135,61 @@ def load_kpis() -> pd.DataFrame:
     return pd.concat([viewed[['kpi','label','value']], purchased[['kpi','label','value']], streamer[['kpi','label','value']], best_games[['kpi','label','value']], sg[['kpi','label','value']]], ignore_index=True)
 
 @st.cache_data
+```python
+# Compute MCA + KMeans segments for trophy buyers
 def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
-    purchase = pd.read_csv(DATA_DIR / "purchase_events_topic.csv")
-    cust = pd.read_csv(DATA_DIR / "customers_topic.csv")
+    # Load purchase & customer CSVs
+    try:
+        purchase = pd.read_csv(DATA_DIR / "purchase_events_topic.csv")
+        cust = pd.read_csv(DATA_DIR / "customers_topic.csv")
+    except FileNotFoundError as e:
+        raise
+
+    # Filter for trophy purchases
     df = purchase.merge(cust, on='customer_id')
-    df = df[df.product_name=='Authentic Mahiman Trophy'].copy()
+    df = df[df.product_name == 'Authentic Mahiman Trophy'].copy()
+    # Calculate age
     df['age'] = (pd.to_datetime('today') - pd.to_datetime(df.birthday)).dt.days // 365
-    df = df[['customer_id','age','gender','region']].head(sample_limit)
-    df['age_bin'] = pd.cut(df.age, bins=range(10,81,5), labels=[f"{i}-{i+4}" for i in range(10,80,5)], right=False)
+    # Sample limit
+    df = df[['customer_id', 'age', 'gender', 'region']].head(sample_limit)
 
-    mca = prince.MCA(n_components=2, random_state=42).fit(df[['age_bin','gender','region']].astype(str))
-    coords = pd.DataFrame(mca.transform(df[['age_bin','gender','region']]), columns=['Dim1','Dim2'])
-    km = KMeans(n_clusters=k, random_state=42).fit(coords)
-    coords['cluster'] = km.labels_
-    df['cluster'] = coords.cluster
+    if df.empty:
+        # No data
+        return pd.DataFrame(), df, pd.DataFrame(), []
 
-    summary = coords.groupby('cluster').agg(size=('cluster','count'), avg_dim1=('Dim1','mean')).reset_index()
+    # Age bins
+    df['age_bin'] = pd.cut(
+        df.age,
+        bins=range(10, 81, 5),
+        labels=[f"{i}-{i+4}" for i in range(10, 80, 5)],
+        right=False
+    )
+
+    # One-hot via MCA
+    df_mca = df[['age_bin', 'gender', 'region']].astype(str)
+    mca = prince.MCA(n_components=2, random_state=42)
+    coords_arr = mca.fit_transform(df_mca)
+    coords = pd.DataFrame(coords_arr, columns=['Dim1', 'Dim2'], index=df.index)
+
+    # Drop any NaNs from MCA result
+    valid = coords.dropna()
+    if valid.empty:
+        return valid, df.loc[valid.index], pd.DataFrame(), []
+
+    # KMeans clustering
+    km = KMeans(n_clusters=k, random_state=42)
+    labels = km.fit_predict(valid)
+    coords = coords.assign(cluster=labels)
+    df.loc[valid.index, 'cluster'] = labels
+
+    # Summary
+    summary = coords.groupby('cluster').agg(
+        size=('cluster', 'count'),
+        avg_age=('Dim1', 'mean')
+    ).reset_index()
 
     return coords, df, summary, km.cluster_centers_
+```
 
 @st.cache_data
 def update_year(y: int):
