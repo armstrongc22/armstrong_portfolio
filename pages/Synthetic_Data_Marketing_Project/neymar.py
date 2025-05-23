@@ -8,7 +8,8 @@ from datetime import datetime
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
 st.set_page_config(page_title="Euphoria CSV Dashboard", layout="wide")
-DATA_DIR = Path(__file__).parent / "data_csvs"
+HERE     = Path(__file__).parent
+DATA_DIR = HERE / "data_csvs"
 TROPHY_DIR = DATA_DIR / "trophy"
 # ── UTILITY: load any CSVs matching base name ─────────────────────────────────
 def load_topic_csvs(topic: str) -> pd.DataFrame:
