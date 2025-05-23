@@ -13,24 +13,43 @@ st.set_page_config(page_title="Euphoria Analytical Dashboard (CSV)", layout="wid
 DATA_DIR = Path("data_csvs")
 
 # ── Utility: load all versioned CSVs for a topic ────────────────────────────
+# ── Utility: load all versioned CSVs for a topic ────────────────────────────
 def load_topic_csvs(topic: str, data_dir: Path = DATA_DIR) -> pd.DataFrame:
     """
-    Concatenate all files named <topic>* .csv in data_dir, sorted by filename.
+    Reads files matching either
+      <topic>*.csv
+    or
+      <topic>_topic*.csv
+    in data_dir, sorts them, concatenates, and returns a DataFrame.
     Raises FileNotFoundError if none or all are empty.
     """
-    files = sorted(data_dir.glob(f"{topic}*.csv"))
+    # build two candidate patterns
+    pats = [f"{topic}*.csv"]
+    if not topic.endswith("_topic"):
+        pats.append(f"{topic}_topic*.csv")
+    else:
+        base = topic[:-6]  # strip “_topic”
+        pats.append(f"{base}*.csv")
+
+    # collect & dedupe
+    files = []
+    for pat in pats:
+        files.extend(data_dir.glob(pat))
+    # unique & sorted
+    files = sorted({f for f in files})
     if not files:
         raise FileNotFoundError(f"No CSVs found for topic '{topic}' in {data_dir}")
+
     dfs = []
     for f in files:
         try:
             df = pd.read_csv(f)
-            if not df.empty:
-                dfs.append(df)
         except pd.errors.EmptyDataError:
             continue
+        if not df.empty:
+            dfs.append(df)
     if not dfs:
-        raise FileNotFoundError(f"All CSVs for topic '{topic}' are empty")
+        raise FileNotFoundError(f"All CSVs for '{topic}' are empty")
     return pd.concat(dfs, ignore_index=True)
 
 # ── KPI loader ─────────────────────────────────────────────────────────────
@@ -113,10 +132,8 @@ def load_kpis() -> pd.DataFrame:
 # ── Yearly watch rank ──────────────────────────────────────────────────────
 @st.cache_data
 def update_year(y: int):
-    """
-    Build a choropleth of watch-hours percent rank for year y.
-    """
-    watch = load_topic_csvs("watch")
+    # note: use "watch_topic" not just "watch"
+    watch = load_topic_csvs("watch_topic")
     watch['date'] = pd.to_datetime(watch['date'], errors='coerce')
     df_year = watch[watch['date'].dt.year == y]
     if df_year.empty:
