@@ -156,42 +156,73 @@ def update_year(year: int):
     return fig
 
 # ── 3) MCA + KMeans on Trophy Purchasers ──────────────────────────────────────
+import numpy as np
+
 @st.cache_data
-def compute_segments(sample_limit: int = 50000, n_clusters: int = 4):
-    dfcust = load_trophy_customers()
-    # compute age
-    dfcust["age"] = (
-        pd.to_datetime("today")
-        - pd.to_datetime(dfcust["birthday"], errors="coerce")
-    ).dt.days // 365
-    df = dfcust[["customer_id","age","gender","region"]].dropna().head(sample_limit)
+def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
+    """
+    Loads the trophy‐customer CSVs that you split into two halves under
+    data_csvs/trophy/, merges with the full purchase_events, runs MCA + KMeans.
+    Returns coords_df, full_df, summary_df, centers (ndarray or empty).
+    """
+    # 1) Load the two halves of your trophy customer list
+    trophy_dir = DATA_DIR / "trophy"
+    parts = sorted(trophy_dir.glob("trophy_customers_part*.csv"))
+    if not parts:
+        # no trophy CSVs found at all
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), np.empty((0,2))
+
+    cust = pd.concat([pd.read_csv(p) for p in parts], ignore_index=True)
+    if cust.empty:
+        return pd.DataFrame(), cust, pd.DataFrame(), np.empty((0,2))
+
+    # 2) Load the full purchases (you sampled) and filter for “Authentic Mahiman Trophy”
+    purchase = pd.read_csv(DATA_DIR / "purchase_events.csv")
+    trophy_purch = purchase[purchase.product_name == "Authentic Mahiman Trophy"]
+    if trophy_purch.empty:
+        return pd.DataFrame(), trophy_purch, pd.DataFrame(), np.empty((0,2))
+
+    # 3) Join them back to get demographics
+    df = trophy_purch.merge(cust, on="customer_id", how="inner")
     if df.empty:
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), []
+        return pd.DataFrame(), df, pd.DataFrame(), np.empty((0,2))
 
-    # bin age
-    df["age_bin"] = pd.cut(
-        df["age"], bins=range(10,81,5),
-        labels=[f"{i}-{i+4}" for i in range(10,80,5)],
-        right=False
-    ).dropna()
+    # 4) Derive age bins
+    df["age"] = ((pd.to_datetime("today") - pd.to_datetime(df["birthday"], errors="coerce"))
+                  .dt.days // 365)
+    df = df.dropna(subset=["age","gender","region"]).head(sample_limit)
+    df["age_bin"] = pd.cut(df["age"], bins=range(10,81,5),
+                          labels=[f"{i}-{i+4}" for i in range(10,80,5)], right=False)
+    df = df.dropna(subset=["age_bin"])
+    if df.empty:
+        return pd.DataFrame(), df, pd.DataFrame(), np.empty((0,2))
 
-    # MCA
+    # 5) MCA on age_bin, gender, region
+    df_mca = df[["age_bin","gender","region"]].astype(str)
     mca = prince.MCA(n_components=2, random_state=42)
-    coords_arr = mca.fit_transform(df[["age_bin","gender","region"]].astype(str))
+    coords_arr = mca.fit_transform(df_mca)
     coords = pd.DataFrame(coords_arr, columns=["Dim1","Dim2"], index=df.index)
 
-    # KMeans
-    clean = coords.dropna()
-    km = KMeans(n_clusters=n_clusters, random_state=42).fit(clean)
-    clean["cluster"] = km.labels_
-    coords["cluster"] = clean["cluster"]
-    df["cluster"] = coords["cluster"].astype(int)
+    # 6) Guard against zero rows
+    coords_clean = coords.dropna()
+    if coords_clean.shape[0] == 0:
+        return coords, df, pd.DataFrame(), np.empty((0,2))
 
-    summary = (
-        clean.groupby("cluster")
-             .agg(size=("cluster","count"), avg_dim1=("Dim1","mean"))
-             .reset_index()
-    )
+    # 7) KMeans
+    km = KMeans(n_clusters=k, random_state=42)
+    km.fit(coords_clean)
+    coords_clean["cluster"] = km.labels_
+
+    # 8) Map clusters back
+    coords["cluster"] = coords_clean["cluster"]
+    df["cluster"]    = coords["cluster"].fillna(-1).astype(int)
+
+    # 9) Summary
+    summary = coords_clean.groupby("cluster").agg(
+        size=("cluster","count"),
+        avg_dim1=("Dim1","mean"),
+    ).reset_index()
+
     return coords, df, summary, km.cluster_centers_
 # ── Streamlit UI ─────────────────────────────────────────────────────────────
 def main():
@@ -217,21 +248,20 @@ def main():
     with tabs[2]:
         st.header("Buyer Segments (Authentic Mahiman Trophy)")
 
-        # On button click, run your MCA+KMeans function
         if st.button("Compute Segments"):
-            coords, full, summary, centers = compute_segments()
+            coords, full, summary, centers = compute_trophy_segments()
 
-            if full.empty:
-                st.warning("No trophy purchasers found in your CSVs.")
+            if full.empty or summary.empty:
+                st.warning(
+                    "No trophy purchasers found – check that you split and placed your CSVs in data_csvs/trophy/")
             else:
                 st.dataframe(summary)
                 fig = px.scatter(coords, x="Dim1", y="Dim2", color="cluster")
-                if len(centers) > 0:
+                if centers.size:
                     fig.add_scatter(
-                        x=centers[:, 0],
-                        y=centers[:, 1],
+                        x=centers[:, 0], y=centers[:, 1],
                         mode="markers",
-                        marker=dict(symbol="x", size=12),
+                        marker=dict(symbol="x", size=12)
                     )
                 st.plotly_chart(fig, use_container_width=True)
 
