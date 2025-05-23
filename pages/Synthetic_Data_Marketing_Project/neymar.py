@@ -38,7 +38,7 @@ def load_kpis() -> pd.DataFrame:
     watch    = load_topic_csvs("watch_topic")
     purchase = load_topic_csvs("purchase_events_topic")
     streams  = load_topic_csvs("streams_topic")
-    partners = load_topic_csvs("partners_topic")
+    partners = load_topic_csvs("partners")
     games    = load_topic_csvs("games_topic")
 
     if watch.empty or purchase.empty or streams.empty or partners.empty or games.empty:
@@ -107,7 +107,7 @@ def load_kpis() -> pd.DataFrame:
 # ── 2) Yearly Watch Rank ──────────────────────────────────────────────────────
 @st.cache_data
 def update_year(year: int):
-    watch = load_topic_csvs("watch_topic")
+    watch = load_topic_csvs("watch")
     if watch.empty:
         return px.choropleth(pd.DataFrame(columns=["country","watch_hours"]),
                              locations="country", color="watch_hours")
@@ -141,8 +141,8 @@ def update_year(year: int):
 # ── 3) MCA + KMeans on Trophy Purchasers ──────────────────────────────────────
 @st.cache_data
 def compute_trophy_segments(sample_limit: int=50000, k: int=4):
-    purchase  = load_topic_csvs("purchase_events_topic")
-    customers = load_topic_csvs("customers_topic")
+    purchase  = load_topic_csvs("purchase_events")
+    customers = load_topic_csvs("customers")
 
     if purchase.empty or customers.empty:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), []
