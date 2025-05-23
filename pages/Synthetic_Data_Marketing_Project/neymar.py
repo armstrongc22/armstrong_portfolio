@@ -12,6 +12,9 @@ from confluent_kafka import Consumer, TopicPartition
 from sklearn.cluster import KMeans
 import streamlit as st
 
+# ── Page config must be the first Streamlit call ───────────────────────────
+st.set_page_config(page_title="Euphoria Analytical Dashboard", layout="wide")
+
 # ── Directory setup ─────────────────────────────────────────────────────────
 BASELINE_DIR = Path.cwd() / "baseline_samples"
 CHUNKS_DIR = Path.cwd() / "data_chunks"
@@ -88,142 +91,55 @@ def chunk_df_to_size(df: pd.DataFrame, prefix: str, chunk_mb: int = 40) -> list[
         part.to_csv(p, index=False)
         paths.append(p)
     return paths
-@st.cache_data
-def load_topic_csv(topic: str) -> pd.DataFrame:
-    """
-    Look first for chunked CSV parts in data_chunks/<topic>_part*.csv;
-    if none exist, fall back to the single data_csvs/<topic>.csv.
-    """
-    # 1) try chunked parts
-    parts = sorted(CHUNKS_DIR.glob(f"{topic}_part*.csv"))
-    if parts:
-        return pd.concat((pd.read_csv(p) for p in parts), ignore_index=True)
-    # 2) try single CSV
-    single = DATA_DIR / f"{topic}.csv"
-    if single.exists():
-        return pd.read_csv(single)
-    raise FileNotFoundError(f"No CSV found for topic `{topic}`")
-
-@st.cache_data
-def load_full_topic_to_csv(topic: str) -> Path:
-    """
-    Consume every message from `topic` and write it to data_csvs/<topic>.csv
-    """
-    conf = get_kafka_conf('streamlit-full-group')
-    consumer = Consumer(conf)
-    consumer.subscribe([topic])
-
-    records = []
-    while True:
-        msg = consumer.poll(1.0)
-        if msg is None:  # no more messages
-            break
-        if msg.error():
-            continue
-        records.append(json.loads(msg.value()))
-
-    consumer.close()
-    df = pd.DataFrame(records)
-    path = DATA_DIR / f"{topic}.csv"
-    df.to_csv(path, index=False)
-    return path
 
 # ── 3) CSV-based analytics ─────────────────────────────────────────────────
 @st.cache_data
 def load_kpis() -> pd.DataFrame:
-    # The list of topics we need for KPIs:
-    topics = [
-        "watch_topic",
-        "purchase_events_topic",
-        "streams_topic",
-        "partners_topic",
-        "games_topic",
-    ]
+    files = {
+        'watch': 'watch_topic.csv',
+        'purchase': 'purchase_events_topic.csv',
+        'streams': 'streams_topic.csv',
+        'partners': 'partners_topic.csv',
+        'games': 'games_topic.csv'
+    }
+    # Ensure all exist
+    for f in files.values():
+        if not (DATA_DIR / f).exists():
+            raise FileNotFoundError(f"Missing CSV: {f}")
 
-    # Check that at least one CSV (or chunk) exists for each topic:
-    missing = []
-    for t in topics:
-        single = DATA_DIR / f"{t}.csv"
-        parts  = list(CHUNKS_DIR.glob(f"{t}_part*.csv"))
-        if not single.exists() and not parts:
-            missing.append(t)
-    if missing:
-        raise FileNotFoundError(f"No CSV found for topic(s): {missing}")
+    watch = pd.read_csv(DATA_DIR / files['watch'])
+    purchase = pd.read_csv(DATA_DIR / files['purchase'])
+    streams = pd.read_csv(DATA_DIR / files['streams'])
+    partners = pd.read_csv(DATA_DIR / files['partners'])
+    games = pd.read_csv(DATA_DIR / files['games'])
 
-    # Load each DataFrame:
-    watch    = load_topic_csv("watch_topic")
-    purchase = load_topic_csv("purchase_events_topic")
-    streams  = load_topic_csv("streams_topic")
-    partners = load_topic_csv("partners_topic")
-    games    = load_topic_csv("games_topic")
+    # Top 10 viewed
+    viewed = watch.groupby('country')['length'].sum().nlargest(10).reset_index()
+    viewed['kpi'], viewed['label'], viewed['value'] = 'Top 10 Viewed Countries', viewed['country'], viewed['length'].astype(str)
 
-    # Top 10 viewed countries
-    viewed = (
-        watch.groupby("country")["length"]
-        .sum()
-        .nlargest(10)
-        .reset_index()
-        .rename(columns={"length": "value", "country": "label"})
-    )
-    viewed["kpi"] = "Top 10 Viewed Countries"
-
-    # Top 8 purchased products
-    purchased = (
-        purchase.groupby("product_name")
-        .size()
-        .nlargest(8)
-        .reset_index(name="value")
-        .rename(columns={"product_name": "label"})
-    )
-    purchased["kpi"] = "Top 8 Purchased Products"
+    # Top 8 purchases
+    purchased = purchase.groupby('product_name').size().nlargest(8).reset_index(name='count')
+    purchased['kpi'], purchased['label'], purchased['value'] = 'Top 8 Purchased Products', purchased['product_name'], purchased['count'].astype(str)
 
     # Top 10 streamer performance
-    sp = streams.merge(partners, on="partner_id")
-    sp["score"] = (sp.viewers_total / sp.length.replace(0, 1)) * sp.comments_total
-    streamer = (
-        sp.groupby("screen_name")["score"]
-        .sum()
-        .nlargest(10)
-        .reset_index()
-        .rename(columns={"screen_name": "label", "score": "value"})
-    )
-    streamer["kpi"] = "Top 10 Streamer Performance"
-    streamer["value"] = streamer["value"].round(2).astype(str)
+    sp = streams.merge(partners, on='partner_id')
+    sp['score'] = (sp.viewers_total / sp.length.replace(0,1)) * sp.comments_total
+    streamer = sp.groupby('screen_name')['score'].sum().nlargest(10).reset_index()
+    streamer['kpi'], streamer['label'], streamer['value'] = 'Top 10 Streamer Performance', streamer['screen_name'], streamer['score'].round(2).astype(str)
 
-    # Top 2 best-selling games
-    best_games = (
-        purchase[purchase.category == "game"]
-        .groupby("product_name")
-        .size()
-        .nlargest(2)
-        .reset_index(name="value")
-        .rename(columns={"product_name": "label"})
-    )
-    best_games["kpi"] = "Top 2 Best-Selling Games"
+    # Best-selling games
+    best_games = purchase[purchase.category=='game'].groupby('product_name').size().nlargest(2).reset_index(name='count')
+    best_games['kpi'], best_games['label'], best_games['value'] = 'Top 2 Best-Selling Games', best_games['product_name'], best_games['count'].astype(str)
 
-    # Top 2 most-streamed games
-    sg = (
-        streams.merge(games, on="game_id")
-        .groupby("title")
-        .size()
-        .nlargest(2)
-        .reset_index(name="value")
-        .rename(columns={"title": "label"})
-    )
-    sg["kpi"] = "Top 2 Most-Streamed Games"
+    # Most-streamed games
+    sg = streams.merge(games, on='game_id').groupby('title').size().nlargest(2).reset_index(name='count')
+    sg['kpi'], sg['label'], sg['value'] = 'Top 2 Most-Streamed Games', sg['title'], sg['count'].astype(str)
 
-    # Combine into one DataFrame
-    return pd.concat(
-        [
-            viewed[["kpi", "label", "value"]],
-            purchased[["kpi", "label", "value"]],
-            streamer[["kpi", "label", "value"]],
-            best_games[["kpi", "label", "value"]],
-            sg[["kpi", "label", "value"]],
-        ],
-        ignore_index=True,
-    )
+    return pd.concat([viewed[['kpi','label','value']], purchased[['kpi','label','value']], streamer[['kpi','label','value']], best_games[['kpi','label','value']], sg[['kpi','label','value']]], ignore_index=True)
 
+@st.cache_data
+```python
+# Compute MCA + KMeans segments for trophy buyers
 @st.cache_data
 def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
     """
@@ -288,7 +204,7 @@ def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
     ).reset_index()
 
     return coords, df, summary, km.cluster_centers_
-
+```
 
 @st.cache_data
 # Generate choropleth of watch hours by country for a given year
@@ -368,7 +284,7 @@ def main():
     # Load KPI data (CSV)
     try:
     # initialize KPI dataframe in case load_kpis() fails
-         df_kpi = pd.DataFrame()
+    df_kpi = pd.DataFrame()
 
     # Load KPI data (CSV)
     try:
@@ -383,7 +299,7 @@ def main():
 
 tabs = st.tabs(["Data Sampling", "Live Watch", "KPIs", "Yearly Rank", "Segments"])
 
-with tabs[0]:
+    with tabs[0]:
         st.header("Kafka → CSV Sampling & CSV Management")
 
         # 1) Sample ~99MB slice per topic
@@ -432,7 +348,7 @@ with tabs[0]:
         st.write("**Current CSV files in data_csvs/**")
         st.write([x.name for x in DATA_DIR.iterdir()])
 
-with tabs[1]:
+    with tabs[1]:
 
 
         st.header("Live Watch (last 5 min)")
@@ -440,7 +356,7 @@ with tabs[1]:
             pass
         st.plotly_chart(update_live(), use_container_width=True)
 
-with tabs[2]:
+    with tabs[2]:
         st.header("Euphoria KPIs")
         if df_kpi.empty:
             st.write("No KPI data. Sample Kafka topics first.")
@@ -448,7 +364,7 @@ with tabs[2]:
             kpi = st.selectbox("Select KPI", df_kpi.kpi.unique())
             st.dataframe(df_kpi[df_kpi.kpi == kpi])
 
- with tabs[3]:
+    with tabs[3]:
         st.header("Yearly Watch Rank")
         year = st.selectbox("Year", list(range(datetime.now().year, datetime.now().year-10, -1)))
         if df_kpi.empty:
@@ -456,35 +372,49 @@ with tabs[2]:
         else:
             st.plotly_chart(update_year(year), use_container_width=True)
 
-with tabs[4]:
+    with tabs[4]:
         st.header("Buyer Segments")
-        # Initialize empty
-        coords_seg = pd.DataFrame()
-        df_seg = pd.DataFrame()
-        df_seg_summary = pd.DataFrame()
-        seg_centers = []
 
-        # Button to compute
+        # Initialize segment session state
+        if 'seg_results' not in st.session_state:
+            st.session_state.seg_results = {
+                'coords': pd.DataFrame(),
+                'df': pd.DataFrame(),
+                'summary': pd.DataFrame(),
+                'centers': []
+            }
+
+        # Compute button
         if st.button("Compute Buyer Segments"):
             with st.spinner("Running MCA + KMeans..."):
-                coords_seg, df_seg, df_seg_summary, seg_centers = compute_trophy_segments()
+                coords, df, summary, centers = compute_trophy_segments()
+                st.session_state.seg_results = {
+                    'coords': coords,
+                    'df': df,
+                    'summary': summary,
+                    'centers': centers
+                }
 
-        if df_seg.empty and df_seg_summary.empty:
+        # Display results from session state
+        res = st.session_state.seg_results
+        if res['df'].empty:
             st.warning(
-    """
-    No trophy-purchase records found.
-    • Ensure you sampled or pulled full `purchase_events_topic` and `customers_topic` CSVs.
-    • Then click ‘Compute Buyer Segments’ to rerun.
-    """
-)
+                "No trophy-purchase records found.
+"
+                "• Ensure you sampled or pulled full 'purchase_events_topic' and 'customers_topic' CSVs.
+"
+                "• Then click 'Compute Buyer Segments' to rerun."
+            )
         else:
-            st.dataframe(df_seg_summary)
-            fig = px.scatter(coords_seg, x='Dim1', y='Dim2', color='cluster')
-            if len(seg_centers) > 0:
+            st.dataframe(res['summary'])
+            fig = px.scatter(res['coords'], x='Dim1', y='Dim2', color='cluster')
+            if len(res['centers']) > 0:
                 fig.add_scatter(
-                    x=seg_centers[:,0], y=seg_centers[:,1],
+                    x=res['centers'][:,0], y=res['centers'][:,1],
                     mode='markers', marker=dict(symbol='x', size=12)
                 )
             st.plotly_chart(fig, use_container_width=True)
-if __name__ == "__main__":
+
+    if __name__ == "__main__":
+        main() "__main__":
     main()
