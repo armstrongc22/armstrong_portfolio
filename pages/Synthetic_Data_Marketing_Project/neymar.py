@@ -120,19 +120,36 @@ def load_topic_csv(topic: str) -> pd.DataFrame:
         return pd.read_csv(single)
     raise FileNotFoundError(f"No CSV for topic '{topic}'")
 
-# ── 3) Load KPIs ───────────────────────────────────────────────────────────
+# ── 3) Safe CSV reader ────────────────────────────────────────────────────
+def _safe_read_csv(path: Path) -> pd.DataFrame:
+    """Read CSV at path; treat completely empty or missing files as FileNotFoundError."""
+    try:
+        df = pd.read_csv(path)
+    except (pd.errors.EmptyDataError, FileNotFoundError):
+        raise FileNotFoundError(f"Missing or empty CSV: {path.name}")
+    return df
+
+# ── 4) Load KPIs ───────────────────────────────────────────────────────────
 @st.cache_data
 def load_kpis() -> pd.DataFrame:
     required = ["watch_topic.csv", "purchase_events_topic.csv", "streams_topic.csv", "partners_topic.csv", "games_topic.csv"]
-    missing = [f for f in required if not (DATA_DIR / f).exists() or (DATA_DIR / f).stat().st_size == 0]
+    # Check existence and non-empty via safe read
+    missing = []
+    for fname in required:
+        path = DATA_DIR / fname
+        try:
+            _safe_read_csv(path)
+        except FileNotFoundError:
+            missing.append(fname)
     if missing:
         raise FileNotFoundError(f"Missing or empty CSVs: {missing}")
 
-    watch = pd.read_csv(DATA_DIR / "watch_topic.csv")
-    purchase = pd.read_csv(DATA_DIR / "purchase_events_topic.csv")
-    streams = pd.read_csv(DATA_DIR / "streams_topic.csv")
-    partners = pd.read_csv(DATA_DIR / "partners_topic.csv")
-    games = pd.read_csv(DATA_DIR / "games_topic.csv")
+    # Read data
+    watch = _safe_read_csv(DATA_DIR / "watch_topic.csv")
+    purchase = _safe_read_csv(DATA_DIR / "purchase_events_topic.csv")
+    streams = _safe_read_csv(DATA_DIR / "streams_topic.csv")
+    partners = _safe_read_csv(DATA_DIR / "partners_topic.csv")
+    games = _safe_read_csv(DATA_DIR / "games_topic.csv")
 
     # Top 10 viewed
     viewed = watch.groupby('country')['length'].sum().nlargest(10).reset_index()
@@ -162,7 +179,13 @@ def load_kpis() -> pd.DataFrame:
     sg = sg.rename(columns={'title':'label'})
     sg['kpi'] = 'Top 2 Most-Streamed Games'
 
-    return pd.concat([viewed[['kpi','label','value']],
+    return pd.concat([
+        viewed[['kpi','label','value']],
+        purchased[['kpi','label','value']],
+        streamer[['kpi','label','value']],
+        best_games[['kpi','label','value']],
+        sg[['kpi','label','value']]
+    ], ignore_index=True)([viewed[['kpi','label','value']],
                       purchased[['kpi','label','value']],
                       streamer[['kpi','label','value']],
                       best_games[['kpi','label','value']],
