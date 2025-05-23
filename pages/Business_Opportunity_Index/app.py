@@ -28,12 +28,6 @@ hex_df = hex_df[
     (hex_df.city == city) &
     (hex_df.local_opportunity >= thresh)
 ]
-hex_df = bq.read_sql(f"""
-    SELECT hex, popularity, local_opportunity
-    FROM `{cfg.PROJECT}.{cfg.DATASET}.hex_opportunity`
-    WHERE city = '{city}'
-      AND local_opportunity >= {thresh}
-""")
 
 st.caption(f"Rows fetched after filter ≥ {thresh}: **{len(hex_df)}**")
 
