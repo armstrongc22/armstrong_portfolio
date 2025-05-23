@@ -160,30 +160,28 @@ def update_year(year: int):
 import numpy as np
 
 @st.cache_data
-def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
-    trophy_dir = DATA_DIR / "trophy"
-    parts     = sorted(trophy_dir.glob("trophy_customers_part*.csv"))
+def compute_trophy_segments(sample_limit:int=50000, k:int=4):
+    # load trophy customer splits
+    parts = sorted(TROPHY_DIR.glob("trophy_customers_part*.csv"))
     if not parts:
-        # no split CSVs at all
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), np.empty((0,2))
 
-    # 1) load your two halves & concat
     cust = pd.concat([pd.read_csv(p) for p in parts], ignore_index=True)
     if cust.empty:
         return pd.DataFrame(), cust, pd.DataFrame(), np.empty((0,2))
 
-    # 2) load full purchase_events and filter trophy
-    purchase = pd.read_csv(DATA_DIR / "purchase_events.csv")
-    trophy_purch = purchase[purchase.product_name == "Authentic Mahiman Trophy"]
-    if trophy_purch.empty:
-        return pd.DataFrame(), trophy_purch, pd.DataFrame(), np.empty((0,2))
+    # filter purchase_events for trophy
+    purchase = read_csv("purchase_events")
+    trophy_p = purchase[purchase.product_name == "Authentic Mahiman Trophy"]
+    if trophy_p.empty:
+        return pd.DataFrame(), trophy_p, pd.DataFrame(), np.empty((0,2))
 
-    # 3) join back to get demographics
-    df = trophy_purch.merge(cust, on="customer_id", how="inner")
+    # join to get demographics
+    df = trophy_p.merge(cust, on="customer_id", how="inner")
     if df.empty:
         return pd.DataFrame(), df, pd.DataFrame(), np.empty((0,2))
 
-    # 4) compute age bins
+    # age binning
     df["age"] = ((pd.to_datetime("today") -
                   pd.to_datetime(df["birthday"], errors="coerce"))
                  .dt.days // 365)
@@ -193,38 +191,35 @@ def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
         bins=range(10,81,5),
         labels=[f"{i}-{i+4}" for i in range(10,80,5)],
         right=False
-    )
+    ).astype(str)
     df = df.dropna(subset=["age_bin"])
     if df.empty:
         return pd.DataFrame(), df, pd.DataFrame(), np.empty((0,2))
 
-    # 5) MCA
-    X = df[["age_bin","gender","region"]].astype(str)
+    # MCA
     mca = prince.MCA(n_components=2, random_state=42)
-    coords_arr = mca.fit_transform(X)
+    coords_arr = mca.fit_transform(df[["age_bin","gender","region"]])
     coords = pd.DataFrame(coords_arr, columns=["Dim1","Dim2"], index=df.index)
 
-    # 6) drop NA rows
     coords_clean = coords.dropna()
-    if coords_clean.shape[0] == 0:
+    if coords_clean.empty:
         return coords, df, pd.DataFrame(), np.empty((0,2))
 
-    # 7) KMeans
+    # KMeans
     km = KMeans(n_clusters=k, random_state=42)
     km.fit(coords_clean)
     coords_clean["cluster"] = km.labels_
 
-    # 8) map clusters back
     coords["cluster"] = coords_clean["cluster"]
     df["cluster"]    = coords["cluster"].fillna(-1).astype(int)
 
-    # 9) summary
     summary = coords_clean.groupby("cluster").agg(
         size     = ("cluster","count"),
         avg_dim1 = ("Dim1","mean")
     ).reset_index()
 
     return coords, df, summary, km.cluster_centers_
+
 # ── Streamlit UI ─────────────────────────────────────────────────────────────
 def main():
     st.title("Euphoria CSV Analytics")
@@ -246,25 +241,31 @@ def main():
         fig = update_year(year)
         st.plotly_chart(fig, use_container_width=True)
     # ── Buyer Segments tab ────────────────────────────────────────────────────
+    # ── Tab 2: Buyer Segments
     with tabs[2]:
         st.header("Buyer Segments (Authentic Mahiman Trophy)")
         if st.button("Compute Segments"):
             coords, full, summary, centers = compute_trophy_segments()
             if full.empty or summary.empty:
                 st.warning(
-                    "No trophy purchasers found — make sure:\n"
-                    "• your purchase_events.csv is up to date\n"
-                    "• you split your trophy_customers CSV into two parts\n"
-                    "• they live in data_csvs/trophy/"
+                    "No trophy-purchase data found. Make sure:\n"
+                    "• `purchase_events.csv` is populated\n"
+                    "• you split `trophy_customers.csv` into two parts named\n"
+                    "  `trophy_customers_part1.csv`, `trophy_customers_part2.csv`\n"
+                    "  under `data_csvs/trophy/`"
                 )
             else:
-                st.dataframe(summary)
-                fig = px.scatter(coords, x="Dim1", y="Dim2", color="cluster")
+                st.dataframe(summary, use_container_width=True)
+                fig = px.scatter(
+                    coords, x="Dim1", y="Dim2", color="cluster",
+                    title="MCA + KMeans clusters"
+                )
                 if centers.size:
                     fig.add_scatter(
-                        x=centers[:, 0], y=centers[:, 1],
+                        x=centers[:,0], y=centers[:,1],
                         mode="markers",
-                        marker=dict(symbol="x", size=12)
+                        marker=dict(symbol="x", size=12, color="black"),
+                        name="centroids"
                     )
                 st.plotly_chart(fig, use_container_width=True)
 
