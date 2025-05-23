@@ -86,7 +86,7 @@ def chunk_df_to_size(df: pd.DataFrame, prefix: str, chunk_mb: int = 40) -> list[
         paths.append(p)
     return paths
 
-# ── Helper: load full topic to CSV ───────────────────────────────────────────
+# ── 3) Helpers for loading CSVs ─────────────────────────────────────────────
 @st.cache_data
 def load_full_topic_to_csv(topic: str) -> Path:
     consumer = Consumer(get_kafka_conf('streamlit-full-group'))
@@ -105,7 +105,6 @@ def load_full_topic_to_csv(topic: str) -> Path:
     df.to_csv(path, index=False)
     return path
 
-# ── Helper: load topic CSV or chunks ────────────────────────────────────────
 @st.cache_data
 def load_topic_csv(topic: str) -> pd.DataFrame:
     parts = sorted(CHUNKS_DIR.glob(f"{topic}_part*.csv"))
@@ -119,8 +118,7 @@ def load_topic_csv(topic: str) -> pd.DataFrame:
 # ── KPI loader ──────────────────────────────────────────────────────────────
 @st.cache_data
 def load_kpis() -> pd.DataFrame:
-    # Validate existence of required CSVs
-    required = ["watch_topic", "purchase_events_topic", "streams_topic", "partners_topic", "games_topic"]
+    required = ["watch_topic","purchase_events_topic","streams_topic","partners_topic","games_topic"]
     missing = [t for t in required if not (DATA_DIR / f"{t}.csv").exists()]
     if missing:
         raise FileNotFoundError(f"Missing CSVs: {missing}")
@@ -131,221 +129,150 @@ def load_kpis() -> pd.DataFrame:
     partners = pd.read_csv(DATA_DIR / "partners_topic.csv")
     games = pd.read_csv(DATA_DIR / "games_topic.csv")
 
-    # Top 10 viewed
     viewed = watch.groupby('country')['length'].sum().nlargest(10).reset_index()
-    viewed.columns = ['label', 'value']
+    viewed.columns = ['label','value']
     viewed['kpi'] = 'Top 10 Viewed Countries'
 
-    # Top 8 purchased
     purchased = purchase.groupby('product_name').size().nlargest(8).reset_index(name='value')
-    purchased = purchased.rename(columns={'product_name': 'label'})
+    purchased = purchased.rename(columns={'product_name':'label'})
     purchased['kpi'] = 'Top 8 Purchased Products'
 
-    # Streamer perf
-    sp = streams.merge(partners, on='partner_id')
-    sp['score'] = (sp.viewers_total / sp.length.replace(0,1)) * sp.comments_total
+    sp = streams.merge(partners,on='partner_id')
+    sp['score'] = (sp.viewers_total/sp.length.replace(0,1))*sp.comments_total
     streamer = sp.groupby('screen_name')['score'].sum().nlargest(10).reset_index()
-    streamer.columns = ['label', 'value']
-    streamer['value'] = streamer['value'].round(2)
-    streamer['kpi'] = 'Top 10 Streamer Performance'
+    streamer.columns=['label','value']
+    streamer['kpi']='Top 10 Streamer Performance'
 
-    # Best-selling games
-    best_games = purchase[purchase.category=='game']
-    best_games = best_games.groupby('product_name').size().nlargest(2).reset_index(name='value')
-    best_games = best_games.rename(columns={'product_name': 'label'})
-    best_games['kpi'] = 'Top 2 Best-Selling Games'
+    best_games = purchase[purchase.category=='game'].groupby('product_name').size().nlargest(2).reset_index(name='value')
+    best_games = best_games.rename(columns={'product_name':'label'})
+    best_games['kpi']='Top 2 Best-Selling Games'
 
-    # Most-streamed games
-    sg = streams.merge(games, on='game_id')
-    sg = sg.groupby('title').size().nlargest(2).reset_index(name='value')
-    sg = sg.rename(columns={'title': 'label'})
-    sg['kpi'] = 'Top 2 Most-Streamed Games'
+    sg = streams.merge(games,on='game_id').groupby('title').size().nlargest(2).reset_index(name='value')
+    sg = sg.rename(columns={'title':'label'})
+    sg['kpi']='Top 2 Most-Streamed Games'
 
     return pd.concat([viewed[['kpi','label','value']],
                       purchased[['kpi','label','value']],
                       streamer[['kpi','label','value']],
                       best_games[['kpi','label','value']],
-                      sg[['kpi','label','value']]],
-                     ignore_index=True)
+                      sg[['kpi','label','value']]],ignore_index=True)
 
-# ── Compute segments ─────────────────────────────────────────────────────────
+# ── Segments computation ─────────────────────────────────────────────────────
 @st.cache_data
-def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
+def compute_trophy_segments(sample_limit: int=50000,k:int=4):
     try:
-        purchase = load_topic_csv("purchase_events_topic")
-        cust = load_topic_csv("customers_topic")
+        purchase = load_topic_csv('purchase_events_topic')
+        cust = load_topic_csv('customers_topic')
     except FileNotFoundError:
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), []
+        return pd.DataFrame(),pd.DataFrame(),pd.DataFrame(),[]
 
-    df = purchase.merge(cust, on='customer_id')
-    df = df[df.product_name == 'Authentic Mahiman Trophy'].copy()
+    df = purchase.merge(cust,on='customer_id')
+    df = df[df.product_name=='Authentic Mahiman Trophy'].copy()
     if df.empty:
-        return pd.DataFrame(), df, pd.DataFrame(), []
+        return pd.DataFrame(),df,pd.DataFrame(),[]
 
-    df['age'] = ((pd.to_datetime('today') - pd.to_datetime(df['birthday'], errors='coerce')).dt.days // 365)
-    df = df[['customer_id','age','gender','region']].head(sample_limit)
-    df = df.dropna(subset=['age','gender','region'])
-    df['age_bin'] = pd.cut(df['age'], bins=range(10,81,5), labels=[f"{i}-{i+4}" for i in range(10,80,5)], right=False)
+    df['age'] = ((pd.to_datetime('today')-pd.to_datetime(df['birthday'],errors='coerce')).dt.days//365)
+    df = df[['customer_id','age','gender','region']].head(sample_limit).dropna()
+    df['age_bin'] = pd.cut(df['age'],bins=range(10,81,5),labels=[f"{i}-{i+4}" for i in range(10,80,5)],right=False)
     df = df.dropna(subset=['age_bin'])
     if df.empty:
-        return pd.DataFrame(), df, pd.DataFrame(), []
+        return pd.DataFrame(),df,pd.DataFrame(),[]
 
     df_mca = df[['age_bin','gender','region']].astype(str)
-    mca = prince.MCA(n_components=2, random_state=42)
+    mca = prince.MCA(n_components=2,random_state=42)
     coords_arr = mca.fit_transform(df_mca)
-    coords = pd.DataFrame(coords_arr, columns=['Dim1','Dim2'], index=df.index)
+    coords = pd.DataFrame(coords_arr,columns=['Dim1','Dim2'],index=df.index)
 
     coords_clean = coords.dropna()
     if coords_clean.empty:
-        return coords, df, pd.DataFrame(), []
-    km = KMeans(n_clusters=k, random_state=42)
+        return coords,df,pd.DataFrame(),[]
+    km = KMeans(n_clusters=k,random_state=42)
     labels = km.fit_predict(coords_clean)
-    coords_clean['cluster'] = labels
+    coords_clean['cluster']=labels
     coords = coords.join(coords_clean['cluster']).fillna(-1)
-    df['cluster'] = coords['cluster'].astype(int)
+    df['cluster']=coords['cluster'].astype(int)
 
-    summary = coords_clean.groupby('cluster').agg(size=('cluster','count'), avg_dim1=('Dim1','mean')).reset_index()
-    return coords, df, summary, km.cluster_centers_
+    summary = coords_clean.groupby('cluster').agg(size=('cluster','count'),avg_dim1=('Dim1','mean')).reset_index()
+    return coords,df,summary,km.cluster_centers_
 
-# ── Yearly watch rank ───────────────────────────────────────────────────────
+# ── Yearly rank ─────────────────────────────────────────────────────────────
 @st.cache_data
-def update_year(y: int):
-    csv = DATA_DIR / 'watch_topic.csv'
-    if not csv.exists():
-        raise FileNotFoundError(f"Missing: {csv}")
-    watch = pd.read_csv(csv)
-    watch['date'] = pd.to_datetime(watch['date'], utc=True, errors='coerce')
-    watch = watch.dropna(subset=['date'])
-    df_year = watch[watch['date'].dt.year == y]
-    grouped = df_year.groupby('country')['length'].sum().reset_index()
-    grouped['watch_hours'] = grouped['length']/3600
-    grouped['pct_rank'] = grouped['watch_hours'].rank(pct=True)
-    fig = px.choropleth(grouped, locations='country', locationmode='country names',
-                        color='pct_rank', hover_data=['watch_hours','pct_rank'],
-                        color_continuous_scale='Viridis', range_color=(0,1))
+def update_year(y:int):
+    path = DATA_DIR/'watch_topic.csv'
+    if not path.exists():
+        raise FileNotFoundError
+    watch = pd.read_csv(path)
+    watch['date']=pd.to_datetime(watch['date'],utc=True,errors='coerce')
+    watch=watch.dropna(subset=['date'])
+    year_df = watch[watch['date'].dt.year==y]
+    grouped=year_df.groupby('country')['length'].sum().reset_index()
+    grouped['watch_hours']=grouped['length']/3600
+    grouped['pct_rank']=grouped['watch_hours'].rank(pct=True)
+    fig=px.choropleth(grouped,locations='country',locationmode='country names',color='pct_rank',hover_data=['watch_hours','pct_rank'],color_continuous_scale='Viridis',range_color=(0,1))
     fig.update_layout(title=f"Yearly Watch Rank: {y}")
     return fig
 
 # ── Live watch ──────────────────────────────────────────────────────────────
 def update_live():
-    consumer = Consumer(get_kafka_conf('streamlit-live-group'))
-    consumer.subscribe(["watch_live_topic"]);
-    for tp in consumer.assignment():
-        consumer.seek(TopicPartition(tp.topic, tp.partition, 0))
-    msgs = consumer.consume(num_messages=200, timeout=1.0)
+    consumer=Consumer(get_kafka_conf('streamlit-live-group'))
+    consumer.subscribe(['watch_live_topic'])
+    for tp in consumer.assignment(): consumer.seek(TopicPartition(tp.topic,tp.partition,0))
+    msgs=consumer.consume(num_messages=200,timeout=1.0)
     consumer.close()
-
-    records = []
-    cutoff = datetime.now(timezone.utc) - timedelta(minutes=5)
+    recs=[]
+    cutoff=datetime.now(timezone.utc)-timedelta(minutes=5)
     for m in msgs or []:
         if m and not m.error():
-            d = json.loads(m.value().decode())
-            ts = pd.to_datetime(d['date'], utc=True, infer_datetime_format=True)
-            if ts >= cutoff:
-                records.append(d)
-    if not records:
-        empty = pd.DataFrame({'country':[], 'watch_hours':[]})
-        fig = px.choropleth(empty, locations='country', color='watch_hours')
+            d=json.loads(m.value().decode())
+            ts=pd.to_datetime(d['date'],utc=True,infer_datetime_format=True)
+            if ts>=cutoff: recs.append(d)
+    if not recs:
+        fig=px.choropleth(pd.DataFrame(columns=['country','watch_hours']),locations='country',color='watch_hours')
         fig.update_layout(title="No live data")
         return fig
-    df_live = pd.DataFrame(records).groupby('country')['length'].sum().reset_index()
-    df_live['watch_hours'] = df_live['length']/3600
-    fig = px.choropleth(df_live, locations='country', color='watch_hours', hover_name='country',
-                        color_continuous_scale='Viridis')
+    df_live=pd.DataFrame(recs).groupby('country')['length'].sum().reset_index()
+    df_live['watch_hours']=df_live['length']/3600
+    fig=px.choropleth(df_live,locations='country',color='watch_hours',hover_name='country',color_continuous_scale='Viridis')
     fig.update_layout(title="Live Watch Hours (last 5 min)")
     return fig
 
-# ── Streamlit app UI ─────────────────────────────────────────────────────────
+# ── Streamlit UI ───────────────────────────────────────────────────────────
 def main():
-    # Title
     st.title("Euphoria Analytical Dashboard")
-
-    # Load KPI data
     try:
-        df_kpi = load_kpis()
-    except FileNotFoundError as e:
-        df_kpi = pd.DataFrame()
-        st.warning(f"KPI CSV missing: run sampling first ({e})")
-
-    # Tabs
-    tabs = st.tabs(["Data Sampling","Live Watch","KPIs","Yearly Rank","Segments"])
-
-    # Data Sampling tab
+        df_kpi=load_kpis()
+    except FileNotFoundError:
+        df_kpi=pd.DataFrame()
+        st.warning("Missing KPI CSVs. Sample data first.")
+    tabs=st.tabs(["Data Sampling","Live Watch","KPIs","Yearly Rank","Segments"])
     with tabs[0]:
-        st.header("Kafka → CSV Sampling & CSV Management")
+        st.header("Data Sampling & CSV Management")
         if st.button("Sample Kafka (99MB each)"):
-            results = {t: sample_topic_to_size(t) for t in [
-                'watch_topic','purchase_events_topic','streams_topic',
-                'partners_topic','games_topic','customers_topic']}
-            st.json({k:{subk:str(subv) for subk,subv in v.items()} for k,v in results.items()})
+            res={t:sample_topic_to_size(t) for t in ['watch_topic','purchase_events_topic','streams_topic','partners_topic','games_topic','customers_topic']}
+            st.json(res)
         if st.button("Pull Full CSVs (purchase/customer)"):
-            full = {t:str(load_full_topic_to_csv(t)) for t in ['purchase_events_topic','customers_topic']}
-            st.json(full)
+            res={t:str(load_full_topic_to_csv(t)) for t in ['purchase_events_topic','customers_topic']}
+            st.json(res)
         if st.button("Chunk all CSVs (~40MB)"):
-            out = {}
-            for p in DATA_DIR.glob('*_topic.csv'):
-                topic = p.stem
-                try:
-                    df = load_topic_csv(topic)
-                    parts = chunk_df_to_size(df, topic)
-                    out[topic] = [str(x) for x in parts]
-                except Exception as e:
-                    out[topic] = f"Error: {e}"
+            out={p.stem:[str(x) for x in chunk_df_to_size(load_topic_csv(p.stem),p.stem)] for p in DATA_DIR.glob('*_topic.csv')}
             st.json(out)
         st.markdown("---")
-        st.write("**data_csvs/**:", [x.name for x in DATA_DIR.iterdir()])
-
-    # Live Watch tab
+        st.write("data_csvs:",[x.name for x in DATA_DIR.iterdir()])
     with tabs[1]:
         st.header("Live Watch (last 5 min)")
-        if st.button("Refresh Live"):
-            pass
-        st.plotly_chart(update_live(), use_container_width=True)
-
-    # KPI Dashboard tab
+        if st.button("Refresh Live"): pass
+        st.plotly_chart(update_live(),use_container_width=True)
     with tabs[2]:
         st.header("Euphoria KPIs")
         if df_kpi.empty:
-            st.write("No KPI data. Sample Kafka first.")
+            st.write("No KPI data. Sample data first.")
         else:
-            kpi_choice = st.selectbox("Select KPI", df_kpi.kpi.unique())
-            st.dataframe(df_kpi[df_kpi.kpi == kpi_choice])
-
-    # Yearly Rank tab
+            choice=st.selectbox("Select KPI",df_kpi.kpi.unique())
+            st.dataframe(df_kpi[df_kpi.kpi==choice])
     with tabs[3]:
         st.header("Yearly Watch Rank")
-        years = list(range(datetime.now().year, datetime.now().year-10, -1))
-        y = st.selectbox("Year", years)
+        yr=st.selectbox("Year",list(range(datetime.now().year,datetime.now().year-10,-1)))
         try:
-            fig_year = update_year(y)
-            st.plotly_chart(fig_year, use_container_width=True)
+            st.plotly_chart(update_year(yr),use_container_width=True)
         except FileNotFoundError:
-            st.warning("Missing watch_topic.csv – sample Kafka first.")
-
-    # Segments tab
-    with tabs[4]:
-        st.header("Buyer Segments")
-        if 'seg_results' not in st.session_state:
-            st.session_state.seg_results = {'coords':pd.DataFrame(), 'df':pd.DataFrame(), 'summary':pd.DataFrame(), 'centers':[]}
-        if st.button("Compute Segments"):
-            with st.spinner("Running MCA + KMeans..."):
-                coords, df_seg, summary, centers = compute_trophy_segments()
-                st.session_state.seg_results = {'coords':coords, 'df':df_seg, 'summary':summary, 'centers':centers}
-        res = st.session_state.seg_results
-        if res['df'].empty:
-            st.warning(
-                "Missing trophy-purchase data.
-"
-                "• Pull full purchase_events_topic & customers_topic CSVs.
-"
-                "• Click 'Compute Segments' to rerun."
-            )
-        else:
-            st.dataframe(res['summary'])
-            fig_seg = px.scatter(res['coords'], x='Dim1', y='Dim2', color='cluster')
-            if len(res['centers']):
-                fig_seg.add_scatter(x=res['centers'][:,0], y=res['centers'][:,1], mode='markers', marker=dict(symbol='x', size=12))
-            st.plotly_chart(fig_seg, use_container_width=True)
-
-if __name__ == "__main__":
-    main()
+            st.warning("Missing watch_topic.csv
