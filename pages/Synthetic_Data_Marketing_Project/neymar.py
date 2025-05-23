@@ -365,16 +365,11 @@ def main():
         df_kpi = pd.DataFrame()
         st.warning(f"KPI CSV missing: run sampling first ({e})")
 
-    # Load segment data
-    try:
-        coords_seg, df_seg, df_seg_summary, seg_centers = compute_trophy_segments()
-    except FileNotFoundError as e:
-        coords_seg = pd.DataFrame()
-        df_seg_summary = pd.DataFrame()
-        seg_centers = []
-        st.warning(f"Segment CSV missing: run sampling first ({e})")
+    # Load segment data lazily in the Segments tab
+# We'll initialize empty and compute on demand
+# coords_seg, df_seg, df_seg_summary, seg_centers will be set in the Segments tab
 
-    tabs = st.tabs(["Data Sampling", "Live Watch", "KPIs", "Yearly Rank", "Segments"])
+tabs = st.tabs(["Data Sampling", "Live Watch", "KPIs", "Yearly Rank", "Segments"])
 
     with tabs[0]:
         st.header("Kafka → CSV Sampling & CSV Management")
@@ -449,36 +444,35 @@ def main():
         else:
             st.plotly_chart(update_year(year), use_container_width=True)
 
-        with tabs[4]:
-            st.header("Buyer Segments")
-            # Initialize empty
-            coords_seg = pd.DataFrame()
-            df_seg = pd.DataFrame()
-            df_seg_summary = pd.DataFrame()
-            seg_centers = []
+    with tabs[4]:
+        st.header("Buyer Segments")
+        # Initialize empty
+        coords_seg = pd.DataFrame()
+        df_seg = pd.DataFrame()
+        df_seg_summary = pd.DataFrame()
+        seg_centers = []
 
-            # Button to compute
-            if st.button("Compute Buyer Segments"):
-                with st.spinner("Running MCA + KMeans..."):
-                    coords_seg, df_seg, df_seg_summary, seg_centers = compute_trophy_segments()
+        # Button to compute
+        if st.button("Compute Buyer Segments"):
+            with st.spinner("Running MCA + KMeans..."):
+                coords_seg, df_seg, df_seg_summary, seg_centers = compute_trophy_segments()
 
-            if df_seg.empty and df_seg_summary.empty:
-                st.warning(
-                    """
-                    No trophy-purchase records found.
-                    • Ensure you sampled or pulled full `purchase_events_topic` and `customers_topic` CSVs.
-                    • Then click ‘Compute Buyer Segments’ to rerun.
-                    """
+        if df_seg.empty and df_seg_summary.empty:
+            st.warning(
+    """
+    No trophy-purchase records found.
+    • Ensure you sampled or pulled full `purchase_events_topic` and `customers_topic` CSVs.
+    • Then click ‘Compute Buyer Segments’ to rerun.
+    """
+)
+        else:
+            st.dataframe(df_seg_summary)
+            fig = px.scatter(coords_seg, x='Dim1', y='Dim2', color='cluster')
+            if len(seg_centers) > 0:
+                fig.add_scatter(
+                    x=seg_centers[:,0], y=seg_centers[:,1],
+                    mode='markers', marker=dict(symbol='x', size=12)
                 )
-            else:
-                st.dataframe(df_seg_summary)
-                fig = px.scatter(coords_seg, x='Dim1', y='Dim2', color='cluster')
-                if len(seg_centers) > 0:
-                    fig.add_scatter(
-                        x=seg_centers[:, 0], y=seg_centers[:, 1],
-                        mode='markers', marker=dict(symbol='x', size=12)
-                    )
-                st.plotly_chart(fig, use_container_width=True)
- if __name__ == "__main__":
+            st.plotly_chart(fig, use_container_width=True)
+if __name__ == "__main__":
     main()
-
