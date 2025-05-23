@@ -1,0 +1,11 @@
+Row,city,category,opportunity_score
+1,Lagos,laundromat,100
+2,Medellín,laundromat,100
+3,Phnom Penh,laundromat,100
+4,Da Nang,laundromat,100
+5,Surat,laundromat,100
+6,Da Nang,clinic,99.9
+7,Lagos,clinic,99.3
+8,Medellín,clinic,67.8
+9,Phnom Penh,clinic,0
+10,Surat,clinic,98.1

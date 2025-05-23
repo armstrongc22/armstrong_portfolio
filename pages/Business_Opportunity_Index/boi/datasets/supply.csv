@@ -1,0 +1,11 @@
+Row,city,iso3,category,count
+1,Lagos,NGA,laundromat,0
+2,Medellín,COL,laundromat,0
+3,Phnom Penh,KHM,laundromat,0
+4,Da Nang,VNM,laundromat,0
+5,Surat,IND,laundromat,0
+6,Da Nang,VNM,clinic,1
+7,Lagos,NGA,clinic,11
+8,Medellín,COL,clinic,122
+9,Phnom Penh,KHM,clinic,126
+10,Surat,IND,clinic,202
