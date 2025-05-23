@@ -399,11 +399,11 @@ tabs = st.tabs(["Data Sampling", "Live Watch", "KPIs", "Yearly Rank", "Segments"
         res = st.session_state.seg_results
         if res['df'].empty:
             st.warning(
-                "No trophy-purchase records found.
-"
-                "• Ensure you sampled or pulled full 'purchase_events_topic' and 'customers_topic' CSVs.
-"
-                "• Then click 'Compute Buyer Segments' to rerun."
+                """
+                No trophy-purchase records found.
+                • Ensure you sampled or pulled full `purchase_events_topic` and `customers_topic` CSVs.
+                • Then click 'Compute Buyer Segments' to rerun.
+                """
             )
         else:
             st.dataframe(res['summary'])
