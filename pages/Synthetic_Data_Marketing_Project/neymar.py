@@ -174,16 +174,19 @@ def main():
     st.title("Euphoria Analytical Dashboard (CSV)")
     tabs = st.tabs(["KPIs","Yearly Rank","Buyer Segments","Data Files"])
 
-    with tabs[0]:
+        with tabs[0]:
         st.header("Key Performance Indicators")
         try:
             df_kpi = load_kpis()
-            choice = st.selectbox("Select KPI", df_kpi.kpi.unique())
-            st.dataframe(df_kpi[df_kpi.kpi==choice])
+            if df_kpi.empty:
+                st.warning("No KPI records found. Check your CSVs in data_csvs/.")
+            else:
+                selection = st.selectbox("Select KPI", df_kpi['kpi'].unique())
+                st.dataframe(df_kpi[df_kpi['kpi'] == selection])
         except FileNotFoundError as e:
             st.warning(f"{e}")
 
-    with tabs[1]:
+    with tabs[1]:」
         st.header("Yearly Watch Map")
         year = st.selectbox("Year", list(range(datetime.now().year, datetime.now().year-10, -1)))
         fig = update_year(year)
