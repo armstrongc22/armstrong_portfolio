@@ -189,7 +189,7 @@ def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
     ).reset_index()
 
     return coords, df, summary, km.cluster_centers_
-```
+
 
 @st.cache_data
 def update_year(y: int):
