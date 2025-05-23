@@ -219,22 +219,22 @@ def main():
          coords, full, summary, centers = compute_segments()
         if full.empty:
                 st.warning("No trophy purchasers found in your CSVs.")
-            else:
+        else:
                 st.dataframe(summary)
                 # only plot if coords has the right columns
-                if {"Dim1","Dim2","cluster"}.issubset(coords.columns) and not coords.empty:
-                    dfp = coords.copy()
-                    dfp["cluster"] = dfp["cluster"].astype(str)
-                    fig = px.scatter(dfp, x="Dim1", y="Dim2", color="cluster")
-                    if len(centers):
-                        fig.add_scatter(
-                            x=centers[:,0], y=centers[:,1],
-                            mode="markers",
-                            marker=dict(symbol="x", size=12)
-                        )
-                    st.plotly_chart(fig, use_container_width=True)
-                else:
-                    st.warning("Segment coords incomplete; check your CSVs.")
+            if {"Dim1","Dim2","cluster"}.issubset(coords.columns) and not coords.empty:
+                dfp = coords.copy()
+                dfp["cluster"] = dfp["cluster"].astype(str)
+                fig = px.scatter(dfp, x="Dim1", y="Dim2", color="cluster")
+                if len(centers):
+                    fig.add_scatter(
+                        x=centers[:,0], y=centers[:,1],
+                        mode="markers",
+                        marker=dict(symbol="x", size=12)
+                    )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning("Segment coords incomplete; check your CSVs.")
 
     with tabs[3]:
         st.header("Detected CSV files")
