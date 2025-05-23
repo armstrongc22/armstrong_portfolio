@@ -356,7 +356,17 @@ def update_live():
 
 # ── Streamlit app UI ─────────────────────────────────────────────────────────
 def main():
+    # Streamlit title
     st.title("Euphoria Analytical Dashboard")
+    # Initialize variables to avoid undefined errors
+    df_kpi = pd.DataFrame()
+    coords_seg = pd.DataFrame()
+    df_seg = pd.DataFrame()
+    df_seg_summary = pd.DataFrame()
+    seg_centers = []
+
+    # Load KPI data (CSV)
+    try:
     # initialize KPI dataframe in case load_kpis() fails
     df_kpi = pd.DataFrame()
 
@@ -438,7 +448,7 @@ with tabs[2]:
             kpi = st.selectbox("Select KPI", df_kpi.kpi.unique())
             st.dataframe(df_kpi[df_kpi.kpi == kpi])
 
-with tabs[3]:
+ with tabs[3]:
         st.header("Yearly Watch Rank")
         year = st.selectbox("Year", list(range(datetime.now().year, datetime.now().year-10, -1)))
         if df_kpi.empty:
