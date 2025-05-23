@@ -161,41 +161,47 @@ import numpy as np
 
 @st.cache_data
 def compute_trophy_segments(n_clusters: int = 4):
-    df = load_trophy_customers()
-    # compute age from birthday
-    df["age"] = (
-            (pd.Timestamp.now()
-             - pd.to_datetime(df["birthday"], errors="coerce")
-             )
-            .dt.days
-            // 365
-    )
+    # 1) Load only your pre-sampled trophy customer CSVs (split into parts if needed)
+    parts = sorted((DATA_DIR / "trophy").glob("trophy_customers_part*.csv"))
+    if not parts:
+        raise FileNotFoundError("No trophy customer CSVs found in data_csvs/trophy/")
+    df = pd.concat([pd.read_csv(p) for p in parts], ignore_index=True)
+    if df.empty:
+        # nothing to do
+        return pd.DataFrame(), df, pd.DataFrame(), []
 
+    # 2) Compute age correctly
+    df["birthday"] = pd.to_datetime(df["birthday"], errors="coerce")
+    df["age"] = (pd.Timestamp.now() - df["birthday"]).dt.days // 365
     df = df.dropna(subset=["age", "gender", "region"])
-    # bin age
+
+    # 3) Bin ages
     df["age_bin"] = pd.cut(
         df["age"],
         bins=range(10, 81, 5),
-        labels=[f"{i}-{i + 4}" for i in range(10, 80, 5)],
+        labels=[f"{i}-{i+4}" for i in range(10, 80, 5)],
         right=False
-    )
-    df = df.dropna(subset=["age_bin"])
+    ).astype(str)
+    df = df[df["age_bin"] != "nan"]
 
-    # MCA to 2 dims
+    # 4) MCA on the three categorical columns
     mca = prince.MCA(n_components=2, random_state=42)
-    coords_arr = mca.fit_transform(df[["age_bin", "gender", "region"]].astype(str))
+    coords_arr = mca.fit_transform(df[["age_bin", "gender", "region"]])
     coords = pd.DataFrame(coords_arr, columns=["Dim1", "Dim2"], index=df.index)
 
-    # KMeans
+    # 5) KMeans clustering
     km = KMeans(n_clusters=n_clusters, random_state=42)
-    labels = km.fit_predict(coords)
-    coords["cluster"] = labels
-    df["cluster"] = labels
+    coords["cluster"] = km.fit_predict(coords)
 
-    # summary
+    # 6) Attach cluster back to the customer df
+    df["cluster"] = coords["cluster"].astype(int)
+
+    # 7) Summarize
     summary = (
-        coords.groupby("cluster")
-        .agg(size=("cluster", "count"), avg_dim1=("Dim1", "mean"))
+        coords
+        .groupby("cluster")
+        .agg(size=("cluster", "count"),
+             avg_dim1=("Dim1", "mean"))
         .reset_index()
     )
 
