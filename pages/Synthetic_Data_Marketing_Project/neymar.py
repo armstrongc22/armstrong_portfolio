@@ -200,61 +200,69 @@ def load_kpis() -> pd.DataFrame:
     )
 
 @st.cache_data
-
-# Compute MCA + KMeans segments for trophy buyers
 def compute_trophy_segments(sample_limit: int = 50000, k: int = 4):
-    # Load purchase & customer CSVs
+    """
+    Load purchase_events_topic and customers_topic via CSVs or chunks,
+    filter for "Authentic Mahiman Trophy", perform MCA then KMeans.
+    Returns (coords_df, full_df, summary_df, cluster_centers)
+    """
+    # 1) Load data
     try:
-        purchase = pd.read_csv(DATA_DIR / "purchase_events_topic.csv")
-        cust = pd.read_csv(DATA_DIR / "customers_topic.csv")
+        purchase = load_topic_csv("purchase_events_topic")
+        cust = load_topic_csv("customers_topic")
     except FileNotFoundError as e:
-        raise
+        # no data yet
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), []
 
-    # Filter for trophy purchases
-    df = purchase.merge(cust, on='customer_id')
-    df = df[df.product_name == 'Authentic Mahiman Trophy'].copy()
-    # Calculate age
-    df['age'] = (pd.to_datetime('today') - pd.to_datetime(df.birthday)).dt.days // 365
-    # Sample limit
-    df = df[['customer_id', 'age', 'gender', 'region']].head(sample_limit)
-
+    # 2) Filter trophy buyers
+    df = purchase.merge(cust, on="customer_id", how="inner")
+    df = df[df.product_name == "Authentic Mahiman Trophy"].copy()
     if df.empty:
-        # No data
         return pd.DataFrame(), df, pd.DataFrame(), []
 
-    # Age bins
-    df['age_bin'] = pd.cut(
-        df.age,
-        bins=range(10, 81, 5),
-        labels=[f"{i}-{i+4}" for i in range(10, 80, 5)],
-        right=False
-    )
+    # 3) Compute age
+    df['age'] = ((pd.to_datetime('today') - pd.to_datetime(df['birthday'], errors='coerce')).dt.days // 365)
+    df = df[['customer_id','age','gender','region']].head(sample_limit)
 
-    # One-hot via MCA
-    df_mca = df[['age_bin', 'gender', 'region']].astype(str)
+    # 4) Drop rows with missing values
+    df = df.dropna(subset=['age','gender','region'])
+    if df.empty:
+        return pd.DataFrame(), df, pd.DataFrame(), []
+
+    # 5) Binning age
+    df['age_bin'] = pd.cut(
+        df['age'], bins=range(10, 81, 5),
+        labels=[f"{i}-{i+4}" for i in range(10,80,5)], right=False
+    )
+    df = df.dropna(subset=['age_bin'])
+    if df.empty:
+        return pd.DataFrame(), df, pd.DataFrame(), []
+
+    # 6) MCA on categorical columns
+    df_mca = df[['age_bin','gender','region']].astype(str)
     mca = prince.MCA(n_components=2, random_state=42)
     coords_arr = mca.fit_transform(df_mca)
-    coords = pd.DataFrame(coords_arr, columns=['Dim1', 'Dim2'], index=df.index)
+    coords = pd.DataFrame(coords_arr, columns=['Dim1','Dim2'], index=df.index)
 
-    # Drop any NaNs from MCA result
-    valid = coords.dropna()
-    if valid.empty:
-        return valid, df.loc[valid.index], pd.DataFrame(), []
-
-    # KMeans clustering
+    # 7) KMeans clustering
+    coords_clean = coords.dropna()
+    if coords_clean.empty:
+        return coords, df, pd.DataFrame(), []
     km = KMeans(n_clusters=k, random_state=42)
-    labels = km.fit_predict(valid)
-    coords = coords.assign(cluster=labels)
-    df.loc[valid.index, 'cluster'] = labels
+    labels = km.fit_predict(coords_clean)
+    coords_clean = coords_clean.assign(cluster=labels)
 
-    # Summary
-    summary = coords.groupby('cluster').agg(
-        size=('cluster', 'count'),
-        avg_age=('Dim1', 'mean')
+    # 8) Map clusters back to full coords and df
+    coords = coords.join(coords_clean['cluster']).fillna(-1)
+    df['cluster'] = coords['cluster'].astype(int)
+
+    # 9) Summary statistics
+    summary = coords_clean.groupby('cluster').agg(
+        size=('cluster','count'),
+        avg_dim1=('Dim1','mean')
     ).reset_index()
 
     return coords, df, summary, km.cluster_centers_
-
 
 
 @st.cache_data
