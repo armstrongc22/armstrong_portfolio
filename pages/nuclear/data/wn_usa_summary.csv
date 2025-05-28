@@ -1,0 +1,136 @@
+Reactor Name,Model,Process,Capacity (MWe),Grid Connection,Load Factor (2023) (%),Electricity Generated (2023) (GWh),Net Capacity (MWe),Permanent Shutdown
+Arkansas Nuclear One 1,B&W; (L-loop) DRYAMB,PWR,836.0,17/08/1974,99.30,7274.18,,
+Arkansas Nuclear One 2,CE (2-loop) DRYAMB,PWR,988.0,26/12/1978,89.00,7703.81,,
+Beaver Valley 1,W (3-loop),PWR,908.0,14/06/1976,100.70,8006.89,,
+Beaver Valley 2,W (3-loop),PWR,905.0,17/08/1987,88.40,7005.57,,
+Braidwood 1,W (4-loop),PWR,1194.0,12/07/1987,101.00,10562.93,,
+Braidwood 2,W (4-loop) DRYAMB,PWR,1160.0,25/05/1988,94.00,9550.66,,
+Browns Ferry 1,BWR-4 (Mark 1),BWR,1200.0,15/10/1973,102.30,10750.38,,
+Browns Ferry 2,BWR-4 (Mark 1),BWR,1200.0,28/08/1974,93.40,9813.14,,
+Browns Ferry 3,BWR-4 (Mark 1),BWR,1210.0,12/09/1976,96.80,10261.99,,
+Brunswick 1,BWR-4 (Mark 1),BWR,938.0,04/12/1976,100.30,8243.54,,
+Brunswick 2,BWR-4 (Mark 1),BWR,932.0,29/04/1975,90.80,7414.54,,
+Byron 1,W (4-loop) (DRYAMB),PWR,1164.0,01/03/1985,96.50,9835.73,,
+Byron 2,W (4-Loop) (DRYAMB),PWR,1136.0,06/02/1987,96.70,9623.79,,
+Callaway 1,W (4-loop) DRYAMB,PWR,1215.0,24/10/1984,86.40,9195.58,,
+Calvert Cliffs 1,CE (2-loop) DRYAMB,PWR,877.0,03/01/1975,101.90,7828.41,,
+Calvert Cliffs 2,CE (2-loop) DRYAMB,PWR,855.0,07/12/1976,95.50,7155.35,,
+Catawba 1,W (4-loop) (ICECND),PWR,1160.0,22/01/1985,88.40,8988.09,,
+Catawba 2,W (4-loop) (ICECND),PWR,1150.0,18/05/1986,101.00,10177.43,,
+Clinton 1,BWR-6 (Mark 3),BWR,1062.0,24/04/1987,86.50,8050.49,,
+Columbia,BWR-5 (Mark 2),BWR,1131.0,27/05/1984,84.90,8408.02,,
+Comanche Peak 1,W (4-loop) DRYAMB,PWR,1205.0,24/04/1990,91.00,9610.95,,
+Comanche Peak 2,W (4-loop) DRYAMB,PWR,1195.0,09/04/1993,90.00,9419.27,,
+Cooper,BWR-4 (Mark 1),BWR,769.0,10/05/1974,102.80,6926.05,,
+Davis Besse 1,B&W; (R-loop),PWR,894.0,28/08/1977,102.00,7985.73,,
+Diablo Canyon 1,W (4-loop),PWR,1138.0,11/11/1984,82.30,8207.56,,
+Diablo Canyon 2,W (4-loop),PWR,1118.0,20/10/1985,97.60,9554.55,,
+Donald C. Cook 1,W (4-loop) ICECDN,PWR,1030.0,10/02/1975,91.80,8279.91,,
+Donald C. Cook 2,W (4-loop) ICECND,PWR,1168.0,22/03/1978,101.30,10362.52,,
+Dresden 2,BWR-3 (Mark 1),BWR,894.0,13/04/1970,94.60,7408.14,,
+Dresden 3,BWR-3 (Mark 1),BWR,879.0,22/07/1971,101.90,7845.87,,
+Edwin I. Hatch 1,BWR-4 (Mark 1),BWR,876.0,11/11/1974,98.00,7517.55,,
+Edwin I. Hatch 2,BWR-4 (Mark 1),BWR,883.0,22/09/1978,88.30,6833.54,,
+Enrico Fermi 2,BWR-4 (Mark 1),BWR,1115.0,21/09/1986,95.90,9366.83,,
+Fitzpatrick,BWR-4 (Mark 1),BWR,813.0,01/02/1975,103.50,7373.13,,
+Grand Gulf 1,BWR-6 (Mark 3),BWR,1401.0,20/10/1984,95.70,11750.13,,
+H. B. Robinson 2,W (3-loop) DRYAMB,PWR,741.0,26/09/1970,103.10,6693.97,,
+Harris 1,W (3-loop) DRYAMB,PWR,964.0,19/01/1987,102.00,8609.28,,
+Hope Creek 1,BWR-4 (Mark 1),BWR,1172.0,01/08/1986,97.00,9953.82,,
+Joseph M. Farley 1,W (3-loop),PWR,874.0,18/08/1977,103.50,7922.18,,
+Joseph M. Farley 2,W (3-loop) DRYAMB,PWR,883.0,25/05/1981,88.40,6836.35,,
+Lasalle 1,BWR-5 (Mark 2),BWR,1137.0,04/09/1982,101.40,10095.55,,
+Lasalle 2,BWR-5 (Mark 2),BWR,1140.0,20/04/1984,93.60,9348.50,,
+Limerick 1,BWR-4 (Mark 2),BWR,1134.0,13/04/1985,100.20,9955.71,,
+Limerick 2,BWR-4 (Mark 2),BWR,1134.0,01/09/1989,92.00,9138.37,,
+McGuire 1,W (4-loop) ICECND,PWR,1158.0,12/09/1981,90.70,9202.10,,
+McGuire 2,W (4-loop) (ICECND),PWR,1158.0,23/05/1983,87.50,8872.14,,
+Millstone 2,COMB CE DRYAMB,PWR,869.0,09/11/1975,71.90,5476.38,,
+Millstone 3,W (4-loop) DRYSUB,PWR,1210.0,12/02/1986,77.70,8234.86,,
+Monticello,BWR-3,BWR,628.0,05/03/1971,87.10,4793.50,,
+Nine Mile Point 1,BWR-2 (Mark 1),BWR,613.0,09/11/1969,87.10,4675.61,,
+Nine Mile Point 2,BWR-5 (Mark 2),BWR,1277.0,08/08/1987,97.40,10899.53,,
+North Anna 1,W (3-loop),PWR,948.0,17/04/1978,101.30,8412.10,,
+North Anna 2,W (3-loop),PWR,944.0,25/08/1980,88.90,7352.87,,
+Oconee 1,B&W; (L-loop),PWR,847.0,06/05/1973,102.30,7589.74,,
+Oconee 2,B&W; (L-loop),PWR,848.0,05/12/1973,95.20,7068.01,,
+Oconee 3,B&W; (L-loop),PWR,859.0,18/09/1974,100.80,7588.99,,
+Palo Verde 1,CE (2-loop) DRYAMB,PWR,1311.0,10/06/1985,88.00,10105.43,,
+Palo Verde 2,COMB CE80 DRYAMB,PWR,1314.0,20/05/1986,86.60,9972.52,,
+Palo Verde 3,COMB CE80 DRYAMB,PWR,1312.0,28/11/1987,99.60,11449.96,,
+Peach Bottom 2,BWR-4 (Mark 1),BWR,1300.0,18/02/1974,100.70,11469.21,,
+Peach Bottom 3,BWR-4 (Mark 1),BWR,1331.0,01/09/1974,92.00,10727.42,,
+Perry 1,BWR-6 (Mark 3),BWR,1240.0,19/12/1986,75.70,8227.22,,
+Point Beach 1,W (2-loop) DRYAMB,PWR,591.0,06/11/1970,93.00,4815.15,,
+Point Beach 2,W (2-loop) DRYAMB,PWR,591.0,02/08/1972,94.10,4870.22,,
+Prairie Island 1,W (2-loop) DRYAMB,PWR,522.0,04/12/1973,82.70,3780.99,,
+Prairie Island 2,W (2-loop) DRYAMB,PWR,519.0,21/12/1974,73.70,3349.16,,
+Quad Cities 1,BWR-3 (Mark 1),BWR,908.0,12/04/1972,93.40,7425.73,,
+Quad Cities 2,BWR-3 (Mark 1),BWR,911.0,23/05/1972,97.00,7739.24,,
+R.E. Ginna,W (2-loop),PWR,560.0,02/12/1969,94.70,4644.95,,
+River Bend 1,BWR-6 (Mark 3),BWR,967.0,03/12/1985,51.90,4398.62,,
+Salem 1,W (4-loop) DRYAMB,PWR,1169.0,25/12/1976,89.00,9112.43,,
+Salem 2,W (4-loop) DRYAMB,PWR,1158.0,03/06/1981,91.60,9296.43,,
+Seabrook 1,W (4-loop) DRYAMB,PWR,1246.0,29/05/1990,87.40,9534.37,,
+Sequoyah 1,W (4-loop) ICECND,PWR,1152.0,22/07/1980,100.20,10112.90,,
+Sequoyah 2,W (4-loop) (ICECND),PWR,1139.0,23/12/1981,91.40,9114.69,,
+South Texas Project 1,W (4-loop),PWR,1280.0,30/03/1988,92.50,10372.14,,
+South Texas Project 2,W (4-loop) DRYAMB,PWR,1280.0,11/04/1989,102.10,11443.58,,
+St. Lucie 1,COMB CE DRYAMB,PWR,981.0,07/05/1976,100.60,8644.64,,
+St. Lucie 2,COMB CE DRYAMB,PWR,987.0,13/06/1983,90.40,7816.91,,
+Surry 1,W (3-loop) DRYSUB,PWR,838.0,04/07/1972,102.00,7488.81,,
+Surry 2,W (3-loop) DRYSUB,PWR,838.0,10/03/1973,86.40,6345.86,,
+Susquehanna Steam Electric Station 1,BWR-4 (Mark 2),BWR,1257.0,16/11/1982,97.50,10738.36,,
+Susquehanna Steam Electric Station 2,BWR-4 (Mark 2),BWR,1257.0,03/07/1984,84.60,9312.42,,
+Turkey Point 3,W (3-loop) DRYAMB,PWR,837.0,02/11/1972,92.90,6809.83,,
+Turkey Point 4,W (3-loop) DRYAMB,PWR,821.0,21/06/1973,92.60,6656.18,,
+Virgil C. Summer 1,W (3-loop) DRYAMB,PWR,973.0,16/11/1982,88.20,7517.23,,
+Vogtle 1,W (4-loop) DRYAMB,PWR,1150.0,27/03/1987,91.80,9244.23,,
+Vogtle 2,W (4-loop) DRYAMB,PWR,1152.0,10/04/1989,93.50,9436.09,,
+Vogtle 3,AP1000,PWR,1117.0,01/04/2023,99.30,7369.67,,
+Vogtle 4,AP1000,PWR,1117.0,01/03/2024,-,-,,
+Waterford 3,CE (2-loop),PWR,1168.0,18/03/1985,76.40,7820.38,,
+Watts Bar 1,W (4-loop) (ICECND),PWR,1157.0,06/02/1996,91.30,9253.94,,
+Watts Bar 2,W (4-loop) (ICECND),PWR,1164.0,03/06/2016,92.70,9455.43,,
+Wolf Creek,W (4-loop),PWR,1200.0,12/06/1985,98.00,10301.87,,
+Big Rock Point,-,BWR,,,,,67.0,29/08/1997
+Bonus,Superheater,BWR,,,,,17.0,01/06/1968
+Carolinas�Virginia Tube Reactor (CVTR),Prototype,PHWR,,,,,17.0,10/01/1967
+Crystal River 3,B&W; (L-loop),PWR,,,,,860.0,05/02/2013
+Dresden 1,,BWR,,,,,197.0,31/10/1978
+Duane Arnold 1,BWR-4 (Mark 1),BWR,,,,,601.0,30/10/2020
+Elk River,-,BWR,,,,,22.0,01/02/1968
+Enrico Fermi 1,Liquid Metal FBR,FBR,,,,,61.0,29/11/1972
+Fort Calhoun 1,CE (2-loop),PWR,,,,,482.0,24/10/2016
+Fort St. Vrain,,HTGR,,,,,330.0,29/08/1989
+Haddam Neck,-,PWR,,,,,560.0,05/12/1996
+Hallam,LMGMR (SGR- Sodium cooled graphite moderated reactor),X,,,,,75.0,01/09/1964
+Humboldt Bay,Natural cir.,BWR,,,,,63.0,02/07/1976
+Indian Point 1,PWR,PWR,,,,,257.0,31/10/1974
+Indian Point 2,W (4-loop) DRYAMB,PWR,,,,,998.0,30/04/2020
+Indian Point 3,W (4-loop) DRYAMB,PWR,,,,,1030.0,01/05/2021
+Kewaunee,W (2-loop) DRYAMB,PWR,,,,,566.0,07/05/2013
+Lacrosse,,BWR,,,,,48.0,30/04/1987
+Maine Yankee,,PWR,,,,,860.0,01/08/1997
+Millstone 1,,BWR,,,,,641.0,01/07/1998
+Oyster Creek,BWR-2 (Mark 1),BWR,,,,,619.0,17/09/2018
+Palisades,CE (2-loop) DRYAMB,PWR,,,,,805.0,20/05/2022
+Pathfinder,Prototype,BWR,,,,,59.0,01/10/1967
+Peach Bottom 1,,HTGR,,,,,40.0,01/11/1974
+Pilgrim 1,BWR-3 (Mark 1),BWR,,,,,677.0,31/05/2019
+Piqua,OCM (Organically Cooled and Moderated Reactor),X,,,,,12.0,01/01/1966
+Rancho Seco 1,PWR,PWR,,,,,873.0,07/06/1989
+San Onofre 1,PWR,PWR,,,,,436.0,30/11/1992
+San Onofre 2,CE (2-loop) DRYAMB,PWR,,,,,1070.0,07/06/2013
+San Onofre 3,CE (2-loop) DRYAMB,PWR,,,,,1080.0,07/06/2013
+Saxton,25,PWR,,,,,3.0,01/05/1972
+Shippingport,PLWBR,PWR,,,,,60.0,01/10/1982
+Shoreham,-,BWR,,,,,820.0,01/05/1989
+Three Mile Island 1,B&W; (L-loop),PWR,,,,,819.0,20/09/2019
+Three Mile Island 2,PWR,PWR,,,,,880.0,28/03/1979
+Trojan,,PWR,,,,,1095.0,09/11/1992
+Vallecitos,25,BWR,,,,,24.0,09/12/1963
+Vermont Yankee,BWR-4 (Mark 1),BWR,,,,,605.0,29/12/2014
+Yankee NPS,PWR,PWR,,,,,167.0,01/10/1991
+Zion 1,W (4-loop),PWR,,,,,1040.0,13/02/1998
+Zion 2,W (4-loop),PWR,,,,,1040.0,13/02/1998
