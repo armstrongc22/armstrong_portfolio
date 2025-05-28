@@ -17,4 +17,5 @@ requests
 scikit-learn
 streamlit==1.45.1
 tenacity
+unidecode
 wbgapi
