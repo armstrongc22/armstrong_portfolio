@@ -32,9 +32,9 @@ projects = [
         "url": "https://armstrongportfolio-9xwrmtbknbm2cnrtcvvpmq.streamlit.app"
     },
     {
-        "name": "Cannabis Market Research",
+        "name": "Nuclear Energy Market Research",
         "thumb": IMG_DIR / "canna.png",
-        "url": "https://armstrongportfolio-rj6cipckjilm3vdbacdvrp.streamlit.app"
+        "url": "https://armstrongportfolio-7jczhswxsuebtugxdhlpkp.streamlit.app/"
     },
     {
         "name": "Business Opportunity Index",
@@ -45,6 +45,11 @@ projects = [
         "name": "Synthetic Data Marketing(Desktop Only)",
         "thumb": IMG_DIR / "neymar.png",
         "url": "https://armstrongportfolio-febhp4fxhsde5csvsgzrbx.streamlit.app/"
+    },
+    {
+        "name": "Cannabis Market Research",
+        "thumb": IMG_DIR / "canna.png",
+        "url": "https://armstrongportfolio-rj6cipckjilm3vdbacdvrp.streamlit.app"
     },
 ]
 
