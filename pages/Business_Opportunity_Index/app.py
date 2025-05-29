@@ -7,7 +7,7 @@ import boi.config as cfg
 st.title("High Foot-Traffic Hexes  ×  Opportunity Gap")
 st.markdown(
         """
-        **Welcome to the *Business Opportunity Index**.  
+        Welcome to the *Business Opportunity Index.  
         This application is designed to identify city segments where opening a new laundromat would meet underserved demand.
         The opportunity score combines demand-side indiccators like population and income with supply-side counts of the number of laundromats and foot-traffic in that area. 
         Further improvement will be increasing the amount of cities and business types available, and adding the apporximate income of the area(estimated by average monthly rent) to the opportunity score formula.
