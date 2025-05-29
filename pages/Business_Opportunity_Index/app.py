@@ -7,11 +7,30 @@ import boi.config as cfg
 st.title("High Foot-Traffic Hexes  ×  Opportunity Gap")
 st.markdown(
         """
-        Welcome to the *Business Opportunity Index**.  
-        This application is designed to isolate city segments that would be quality opportunities for laundromats.
-        The opportunity score is based on foot-traffic and the density of laundromats in that area. 
+        *Welcome to the *Business Opportunity Index*.  
+        This application is designed to identify city segments that where opening a new laundromat would meet underserved demand.
+        The opportunity score combines demand-side indiccators like population and income with supply-side counts of the number of laundromats and foot-traffic in that area. 
         Further improvement will be increasing the amount of cities and business types available, and adding the apporximate income of the area to the opportunity score.
-          
+        
+        *Method* 
+        1. **Data Ingestion** - three modules fetch data for each city and stores them locally as CSVs and in the Cloud via Confluent and BigQuery. 
+        The data is ingested through the World Bank API, the Open Street Map API, and the Foursquare Places API. From the World Bank we take the total population and GDP per capita for each city.
+        Open Street Map allowes us to count how many laundromats are within 10km raidus of the city center. 10km is the most the rate-limit will` allow and future iterations will look to expand the radius of the system.
+        And the Foursquare Places API samples 50 points of interest to determiine the populatirty of areas and groups them into 53 resolution-8 haexes. 
+        
+        2. **Data Storage** - The inital iteration of the BOI sent the data ingested from the three modules to a Confulent Kafka server and then piped that into a BigQuery dataset(bq_sink.py). Later a local CSV structured configuration was designed(storage_csv.py).
+        
+        3. **Scoring Methodology** - scorer.py creates the opportunity score at two levles. First the city-level opportunity score takes the supply density per 10k people( count of each POI/(population/10,000)).
+        Secondly the opportunity score is then calculated by normalizing the gap  in the benchmark of the services populaterity and the per 10k density. (1 -**MIN**((per_10k/benchmark),1)).
+        The local opportunity is calculated by taking opportunity score and dividing it by 100 and multiplying it by the popularity of the service in that particular Foursquare hex on the map.
+        
+        4. **Pipeline(optional)** - there is a function that allows the data to be hosted completely in the cloud. However due to storage costs, a new function was added so that the data is hosted locally. The storage requirements are low but the continued expansion of the BOI may lead push passed acceptable storage thresholds.
+        
+        5. **Visualization** -The map leverages h3 hex resolution, geopandas/shapely for polygon construction, and pydeck for rendering the WebGL map. 
+        
+        *Results*
+        This project establishes a scalable approach to visualizing the business opportunities in areas that an investor might not be able to reach. Being able to prospect emerging markets and identify what goods and services are in demand can streamline decision making decrease time to close.  
+        
         """
     )
 # ── 1  City selector ─────────────────────────────────────────────────────
