@@ -9,13 +9,16 @@ import os
 BASE_PATH = Path(__file__).resolve().parent
 
 
-def debug_file_loading():
-    """Debug function to check what files exist"""
-    st.write("### Debug Info: Files in directory")
+def get_available_files():
+    """Get all CSV files and create a mapping"""
     files = list(BASE_PATH.glob("*.csv"))
-    st.write(f"Base path: {BASE_PATH}")
-    st.write(f"CSV files found: {[f.name for f in files]}")
-    return files
+    file_mapping = {}
+
+    for file in files:
+        name = file.stem.lower()  # Get filename without extension, lowercase
+        file_mapping[name] = file
+
+    return file_mapping
 
 
 def clean_sheet(path: Path) -> pd.DataFrame:
@@ -38,27 +41,25 @@ def clean_sheet(path: Path) -> pd.DataFrame:
         st.write("First 3 rows:")
         st.dataframe(df.head(3))
 
-        # Handle different CSV structures
-        if len(df.columns) > 7 and 'Player' not in df.columns:
-            st.write("Handling misaligned headers...")
-            # Handle misaligned headers - assume 2nd column is player name, 4th is GP
-            df['Player'] = df.iloc[:, 1].astype(str)
-            if len(df.columns) > 3:
-                df['GP'] = pd.to_numeric(df.iloc[:, 3], errors='coerce')
-            # Drop original misaligned columns
-            df = df.drop(columns=df.columns[0:7])
+        # Clean column names first
+        df.columns = df.columns.str.strip()
 
-        # Clean column names
-        df.columns = df.columns.str.strip().str.replace(r"Unnamed:.*", "", regex=True)
+        # Handle different possible column names for Player
+        possible_player_cols = ['Player', 'PLAYER', 'player', 'Name', 'NAME', 'name']
+        player_col = None
 
-        # Remove empty or duplicate columns
-        df = df.loc[:, df.columns != ""]
-        df = df.loc[:, ~df.columns.duplicated()]
+        for col in possible_player_cols:
+            if col in df.columns:
+                player_col = col
+                break
 
-        # Ensure Player column exists
-        if 'Player' not in df.columns and len(df.columns) > 0:
-            st.write(f"Renaming first column '{df.columns[0]}' to 'Player'")
+        if player_col and player_col != 'Player':
+            df = df.rename(columns={player_col: 'Player'})
+            st.write(f"Renamed '{player_col}' to 'Player'")
+        elif not player_col and len(df.columns) > 0:
+            # Assume first column is player name
             df = df.rename(columns={df.columns[0]: 'Player'})
+            st.write(f"Assumed first column '{df.columns[0]}' is Player")
 
         # Clean player names
         if 'Player' in df.columns:
@@ -69,24 +70,32 @@ def clean_sheet(path: Path) -> pd.DataFrame:
             # Remove rows where Player is NaN, empty, or just numbers
             df = df[df['Player'].notna()]
             df = df[df['Player'] != '']
-            df = df[~df['Player'].str.match(r'^\d+$', na=False)]
+            df = df[df['Player'] != 'nan']
+            df = df[~df['Player'].str.match(r'^\d+\.?\d*$', na=False)]  # Remove pure numbers
 
             st.write("After cleaning players:")
             st.write(f"Shape: {df.shape}")
+            st.write(f"Sample players: {df['Player'].head(10).tolist()}")
 
-            # Check for our target players with fuzzy matching
-            target_players = ["Jalen Green", "Alperen Sengun"]
-            for target in target_players:
-                matches = df[df['Player'].str.contains(target.split()[0], case=False, na=False)]
-                st.write(f"Players containing '{target.split()[0]}': {matches['Player'].tolist()}")
+        # Handle GP column specifically
+        possible_gp_cols = ['GP', 'G', 'Games', 'GAMES']
+        gp_col = None
+
+        for col in possible_gp_cols:
+            if col in df.columns:
+                gp_col = col
+                break
+
+        if gp_col and gp_col != 'GP':
+            df = df.rename(columns={gp_col: 'GP'})
+            st.write(f"Renamed '{gp_col}' to 'GP'")
 
         # Convert numeric columns properly
-        numeric_cols = df.select_dtypes(include=['object']).columns
-        for col in numeric_cols:
+        for col in df.columns:
             if col != 'Player':
                 df[col] = pd.to_numeric(df[col], errors='coerce')
 
-        # Handle GP column specifically
+        # Handle GP column validation
         if 'GP' in df.columns:
             df['GP'] = pd.to_numeric(df['GP'], errors='coerce')
             st.write(f"GP column stats: min={df['GP'].min()}, max={df['GP'].max()}, null_count={df['GP'].isna().sum()}")
@@ -106,70 +115,60 @@ def clean_sheet(path: Path) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-# Data Loading Functions - Updated with debug info
-@st.cache_data
-def load_guard_basic():
-    return clean_sheet(BASE_PATH / "guard_basic.csv")
+def find_player_in_dataframe(df, target_player):
+    """Find a player in the dataframe using fuzzy matching"""
+    if 'Player' not in df.columns:
+        return None, None
 
+    # Exact match first
+    exact_match = df[df['Player'] == target_player]
+    if not exact_match.empty:
+        return target_player, exact_match
 
-@st.cache_data
-def load_guard_advanced():
-    return clean_sheet(BASE_PATH / "guard_advanced.csv")
+    # Try case-insensitive match
+    case_match = df[df['Player'].str.lower() == target_player.lower()]
+    if not case_match.empty:
+        return case_match.iloc[0]['Player'], case_match
 
+    # Try partial matches
+    target_parts = target_player.lower().split()
+    for part in target_parts:
+        if len(part) > 2:  # Only use meaningful parts
+            partial_matches = df[df['Player'].str.lower().str.contains(part, na=False)]
+            if not partial_matches.empty:
+                return partial_matches.iloc[0]['Player'], partial_matches
 
-@st.cache_data
-def load_isolation():
-    return clean_sheet(BASE_PATH / "isolation.csv")
-
-
-@st.cache_data
-def load_pnr_handler():
-    return clean_sheet(BASE_PATH / "pnr_handler.csv")
-
-
-@st.cache_data
-def load_centers_basics():
-    return clean_sheet(BASE_PATH / "centers_basics.csv")
-
-
-@st.cache_data
-def load_centers_advanced():
-    return clean_sheet(BASE_PATH / "centers_advanced.csv")
-
-
-@st.cache_data
-def load_post_ups():
-    return clean_sheet(BASE_PATH / "post_ups.csv")
-
-
-@st.cache_data
-def load_pnr_big():
-    return clean_sheet(BASE_PATH / "pnr_big.csv")
+    return None, None
 
 
 # Streamlit App
 def main():
     st.set_page_config(layout="wide")
-    st.title("Player Segmentation & Ranking Explorer - DEBUG MODE")
+    st.title("Player Segmentation & Ranking Explorer - FIXED VERSION")
 
-    # Add debug section
+    # Get available files
+    file_mapping = get_available_files()
+
+    # Debug section
     if st.checkbox("Show Debug Info"):
-        debug_file_loading()
+        st.write("### Debug Info: Available CSV Files")
+        st.write(f"Base path: {BASE_PATH}")
+        st.write(f"Available files: {list(file_mapping.keys())}")
         st.write("---")
 
     # Player selection
     player = st.selectbox("Choose player", ["Jalen Green", "Alperen Sengun"])
 
-    # Segment-to-function mapping
-    func_map = {
-        "Guard Basic": load_guard_basic,
-        "Guard Advanced": load_guard_advanced,
-        "Isolation": load_isolation,
-        "Pick & Roll Handler": load_pnr_handler,
-        "Center Basic": load_centers_basics,
-        "Center Advanced": load_centers_advanced,
-        "Post Ups": load_post_ups,
-        "Pick & Roll Big": load_pnr_big
+    # Define segment mappings with flexible file name matching
+    segment_file_mapping = {
+        "Guard Basic": ["guard_basic", "guard_basics", "guards_basic"],
+        "Guard Advanced": ["guard_advanced", "guards_advanced"],
+        "Isolation": ["isolation", "iso"],
+        "Pick & Roll Handler": ["pnr_handler", "pick_roll_handler", "pickroll_handler"],
+        "Center Basic": ["centers_basics", "center_basic", "centers_basic"],
+        "Center Advanced": ["centers_advanced", "center_advanced"],
+        "Post Ups": ["post_ups", "postups", "post_up"],
+        "Pick & Roll Big": ["pnr_big", "pick_roll_big", "pickroll_big"]
     }
 
     # Available segments per player
@@ -182,12 +181,23 @@ def main():
     choices = segs[player]
     segment = st.selectbox("Choose segment", choices)
 
+    # Find the correct file for the selected segment
+    segment_file = None
+    for possible_name in segment_file_mapping[segment]:
+        if possible_name in file_mapping:
+            segment_file = file_mapping[possible_name]
+            break
+
+    if not segment_file:
+        st.error(f"Could not find file for {segment}. Available files: {list(file_mapping.keys())}")
+        return
+
     # Load the chosen dataset
-    with st.spinner(f"Loading {segment} data..."):
-        df = func_map[segment]()
+    with st.spinner(f"Loading {segment} data from {segment_file.name}..."):
+        df = clean_sheet(segment_file)
 
     if df.empty:
-        st.error(f"Could not load data for {segment}. Please check if the file exists.")
+        st.error(f"Could not load data for {segment}. The file exists but contains no valid data.")
         return
 
     # Display basic info about the dataset
@@ -200,12 +210,17 @@ def main():
         st.write("### All players in dataset (first 20):")
         st.write(df['Player'].head(20).tolist())
 
-        # Try fuzzy matching
-        target_name = player.split()[0]  # First name
-        possible_matches = df[df['Player'].str.contains(target_name, case=False, na=False)]
-        if not possible_matches.empty:
-            st.write(f"### Possible matches for '{player}':")
-            st.write(possible_matches['Player'].tolist())
+    # Find the player in the dataset
+    found_player, player_data = find_player_in_dataframe(df, player)
+
+    if found_player is None:
+        st.error(f"Could not find {player} in this dataset")
+        st.write("All available players:")
+        st.write(df['Player'].tolist())
+        return
+    elif found_player != player:
+        st.info(f"Using '{found_player}' (found as match for '{player}')")
+        player = found_player
 
     # Filter: drop GP<50 except chosen player (if GP column exists)
     if 'GP' in df.columns:
@@ -215,35 +230,15 @@ def main():
         if original_size != filtered_size:
             st.info(f"Filtered to {filtered_size} players (GP ≥ 50 or selected player)")
 
-    # Check if our chosen player is in the dataset
-    if player not in df['Player'].values:
-        st.warning(f"{player} not found in this dataset")
-
-        # Try alternative matching
-        if 'Player' in df.columns:
-            # Try first name only
-            first_name = player.split()[0]
-            matches = df[df['Player'].str.contains(first_name, case=False, na=False)]
-            if not matches.empty:
-                st.write(f"Found players with first name '{first_name}':")
-                for idx, row in matches.iterrows():
-                    st.write(f"- {row['Player']}")
-
-                # Use the first match
-                actual_name = matches.iloc[0]['Player']
-                st.info(f"Using '{actual_name}' instead of '{player}'")
-                player = actual_name
-            else:
-                return
-
     # Choose statistic (exclude meta columns)
-    exclude = {'Player', 'GP', 'Min', 'W', 'L', 'Age', 'Team'}
+    exclude = {'Player', 'GP', 'Min', 'W', 'L', 'Age', 'Team', 'G', 'Games'}
     numeric_cols = df.select_dtypes(include=[np.number]).columns
-    stats = [c for c in numeric_cols if c not in exclude]
+    stats = [c for c in numeric_cols if c not in exclude and not df[c].isna().all()]
 
     if not stats:
         st.error("No numeric statistics found in this dataset")
         st.write("Available columns:", df.columns.tolist())
+        st.write("Numeric columns:", numeric_cols.tolist())
         return
 
     stat = st.selectbox("Choose statistic to visualize", stats)
@@ -253,14 +248,20 @@ def main():
         player_row = df[df['Player'] == player]
         if len(player_row) > 0:
             player_value = player_row[stat].iloc[0]
-            rank = (df[stat] > player_value).sum() + 1
-            total = len(df)
-            st.write(f"{player}'s {stat}: **{player_value:.3f}** (Rank: {rank}/{total})")
+            if pd.notna(player_value):
+                rank = (df[stat] > player_value).sum() + 1
+                total = len(df)
+                st.write(f"{player}'s {stat}: **{player_value:.3f}** (Rank: {rank}/{total})")
+            else:
+                st.warning(f"{player} has no data for {stat}")
 
     # Create the scatterplot
     try:
+        # Remove rows with NaN values for the selected statistic
+        plot_df = df.dropna(subset=[stat])
+
         chart = (
-            alt.Chart(df)
+            alt.Chart(plot_df)
             .mark_circle()
             .encode(
                 x=alt.X(f"{stat}:Q", title=stat),
@@ -279,7 +280,7 @@ def main():
                 ),
                 tooltip=["Player:N", f"{stat}:Q"]
             )
-            .properties(height=min(600, len(df) * 20 + 100), width=800)
+            .properties(height=min(600, len(plot_df) * 20 + 100), width=800)
             .resolve_scale(y='independent')
         )
 
@@ -290,11 +291,11 @@ def main():
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            st.metric("Mean", f"{df[stat].mean():.3f}")
+            st.metric("Mean", f"{plot_df[stat].mean():.3f}")
         with col2:
-            st.metric("Median", f"{df[stat].median():.3f}")
+            st.metric("Median", f"{plot_df[stat].median():.3f}")
         with col3:
-            st.metric("Std Dev", f"{df[stat].std():.3f}")
+            st.metric("Std Dev", f"{plot_df[stat].std():.3f}")
 
         # Show top and bottom 5 players
         st.subheader(f"Rankings by {stat}")
@@ -302,12 +303,12 @@ def main():
 
         with col1:
             st.write("**Top 5:**")
-            top_5 = df.nlargest(5, stat)[['Player', stat]]
+            top_5 = plot_df.nlargest(5, stat)[['Player', stat]]
             st.dataframe(top_5, hide_index=True)
 
         with col2:
             st.write("**Bottom 5:**")
-            bottom_5 = df.nsmallest(5, stat)[['Player', stat]]
+            bottom_5 = plot_df.nsmallest(5, stat)[['Player', stat]]
             st.dataframe(bottom_5, hide_index=True)
 
     except Exception as e:
