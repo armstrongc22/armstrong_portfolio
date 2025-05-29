@@ -1,8 +1,6 @@
 # Show insights only if we have them
-if not all_insights:
-    st.warning("No insights generated. Try running with a smaller dataset or check your data.")
-    returnimport
-    streamlit as st
+
+import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
