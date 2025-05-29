@@ -1,4 +1,8 @@
-import streamlit as st
+# Show insights only if we have them
+if not all_insights:
+    st.warning("No insights generated. Try running with a smaller dataset or check your data.")
+    returnimport
+    streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -36,7 +40,19 @@ def load_trophy_customers():
     parts = sorted(TROPHY_DIR.glob("trophy_customers_part*.csv"))
     if not parts:
         raise FileNotFoundError(f"No files matching trophy_customers_part*.csv in {TROPHY_DIR}")
-    df = pd.concat([pd.read_csv(p) for p in parts], ignore_index=True)
+
+    # Load only first part if multiple files to reduce memory
+    if len(parts) > 1:
+        st.info(f"Loading sample data from {parts[0].name} for performance (found {len(parts)} files)")
+        df = pd.read_csv(parts[0])
+    else:
+        df = pd.concat([pd.read_csv(p) for p in parts], ignore_index=True)
+
+    # Sample data if too large
+    if len(df) > 10000:
+        df = df.sample(n=10000, random_state=42)
+        st.info(f"Sampled 10,000 rows for performance")
+
     df['birthday'] = pd.to_datetime(df['birthday'], errors='coerce')
     df = df.dropna(subset=['birthday']).copy()
     df['age'] = ((pd.Timestamp.now() - df['birthday']).dt.days // 365).astype(int)
@@ -51,26 +67,43 @@ def load_trophy_customers():
 
 
 @st.cache_data
-def compute_mca_and_segments(df: pd.DataFrame, col1: str, col2: str, n_clusters: int = 4):
-    X = df[[col1, col2]].dropna().astype(str)
-    mca = prince.MCA(n_components=2, random_state=42).fit(X)
-    coords = mca.row_coordinates(X)
-    coords.columns = ['Dim1', 'Dim2']
-    coords.index = X.index
-    # K-Means segments
-    km = KMeans(n_clusters=n_clusters, random_state=42).fit(coords)
-    coords['segment'] = km.labels_
-    # inertia percentages
-    eigs = mca.eigenvalues_
-    total = eigs.sum()
-    inertia1 = eigs[0] / total * 100
-    inertia2 = eigs[1] / total * 100
+def compute_mca_and_segments(df: pd.DataFrame, col1: str, col2: str, n_clusters: int = 3):
+    try:
+        # Further sample if still too large
+        if len(df) > 5000:
+            df_sample = df.sample(n=5000, random_state=42)
+        else:
+            df_sample = df.copy()
 
-    # Add back original data for segment analysis
-    for col in [col1, col2]:
-        coords[col] = df.loc[coords.index, col].values
+        X = df_sample[[col1, col2]].dropna().astype(str)
 
-    return coords, inertia1, inertia2
+        if len(X) < 100:
+            st.warning(f"Not enough data for MCA analysis ({len(X)} rows)")
+            return pd.DataFrame(), 0, 0
+
+        mca = prince.MCA(n_components=2, random_state=42).fit(X)
+        coords = mca.row_coordinates(X)
+        coords.columns = ['Dim1', 'Dim2']
+        coords.index = X.index
+
+        # K-Means segments with fewer clusters
+        km = KMeans(n_clusters=n_clusters, random_state=42, n_init=10).fit(coords)
+        coords['segment'] = km.labels_
+
+        # inertia percentages
+        eigs = mca.eigenvalues_
+        total = eigs.sum()
+        inertia1 = eigs[0] / total * 100
+        inertia2 = eigs[1] / total * 100
+
+        # Add back original data for segment analysis
+        for col in [col1, col2]:
+            coords[col] = df_sample.loc[coords.index, col].values
+
+        return coords, inertia1, inertia2
+    except Exception as e:
+        st.error(f"MCA analysis failed: {str(e)}")
+        return pd.DataFrame(), 0, 0
 
 
 def create_professional_charts():
@@ -280,21 +313,35 @@ def main():
         st.write(f"Loaded **{len(df):,}** trophy customers")
         st.markdown("---")
 
+        # Simplified pairs - do one at a time to reduce memory
         pairs = [
             ("age_bin", "gender"),
-            ("age_bin", "region"),
-            ("gender", "region"),
         ]
+
+        # Add option to run more analyses
+        if st.checkbox("Run additional MCA analyses (may be slower)", value=False):
+            pairs.extend([
+                ("age_bin", "region"),
+                ("gender", "region"),
+            ])
 
         all_insights = []
 
         for col1, col2 in pairs:
             st.header(f"MCA: **{col1}** + **{col2}**")
-            coords, i1, i2 = compute_mca_and_segments(df, col1, col2)
-            my_palette = ["#93329E", "#F4D03F", "#EA7600", "#8E44AD"]
 
+            with st.spinner(f"Computing MCA for {col1} + {col2}..."):
+                coords, i1, i2 = compute_mca_and_segments(df, col1, col2)
+
+            if coords.empty:
+                st.warning("Skipping this analysis due to insufficient data")
+                continue
+
+            my_palette = ["#93329E", "#F4D03F", "#EA7600"]
+
+            # Simplified scatter plot
             fig = px.scatter(
-                coords,
+                coords.sample(n=min(2000, len(coords)), random_state=42),  # Sample points for display
                 x='Dim1', y='Dim2',
                 color='segment',
                 title=f"MCA: {col1} + {col2}",
@@ -303,35 +350,33 @@ def main():
                     'Dim2': f"Dim2 ({i2:.1f}% inertia)",
                 },
                 color_discrete_sequence=my_palette,
-                template="plotly_dark",
-                render_mode='webgl'
+                template="plotly_white",  # Lighter template for performance
+                width=800, height=500
             )
 
             fig.update_traces(
-                marker=dict(size=4, opacity=0.6, line=dict(width=0))
-            )
-
-            fig.update_layout(
-                paper_bgcolor='black',
-                plot_bgcolor='black',
-                font_color='white'
+                marker=dict(size=3, opacity=0.7)
             )
 
             st.plotly_chart(fig, use_container_width=True)
 
-            # Generate insights for this MCA
-            segment_profiles = coords.groupby('segment')[[col1, col2]].agg(
-                lambda s: s.value_counts().index[0] if len(s.value_counts()) > 0 else 'Unknown'
-            )
-            segment_sizes = coords['segment'].value_counts().sort_index()
+            # Generate insights for this MCA (simplified)
+            if not coords.empty:
+                try:
+                    segment_profiles = coords.groupby('segment')[[col1, col2]].agg(
+                        lambda s: s.value_counts().index[0] if len(s.value_counts()) > 0 else 'Unknown'
+                    )
+                    segment_sizes = coords['segment'].value_counts().sort_index()
 
-            insight_data = {
-                'analysis': f"{col1} + {col2}",
-                'profiles': segment_profiles,
-                'sizes': segment_sizes,
-                'total_variance_explained': i1 + i2
-            }
-            all_insights.append(insight_data)
+                    insight_data = {
+                        'analysis': f"{col1} + {col2}",
+                        'profiles': segment_profiles,
+                        'sizes': segment_sizes,
+                        'total_variance_explained': i1 + i2
+                    }
+                    all_insights.append(insight_data)
+                except Exception as e:
+                    st.warning(f"Could not generate insights for {col1} + {col2}: {str(e)}")
 
             st.markdown("---")
 
