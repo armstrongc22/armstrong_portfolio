@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 
 # File path configuration - all CSV files are in the same directory as the script
-BASE_PATH = Path(".")
+BASE_PATH = Path(__file__).resolve().parent
 
 
 def clean_sheet(path: Path) -> pd.DataFrame:
