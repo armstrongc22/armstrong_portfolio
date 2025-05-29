@@ -108,7 +108,6 @@ def create_professional_charts():
     """Create professional KPI visualizations"""
     # Color palette for consistency
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f']
-
     return colors
 
 
@@ -411,73 +410,77 @@ def main():
         # Strategic Recommendations
         st.subheader("🚀 Marketing & Targeting Strategy")
 
-        # Analyze the most informative segmentation
-        best_analysis = max(all_insights, key=lambda x: x['total_variance_explained'])
+        # Check if we have insights before proceeding
+        if all_insights:
+            # Analyze the most informative segmentation
+            best_analysis = max(all_insights, key=lambda x: x['total_variance_explained'])
 
-        st.success(f"**Primary Segmentation Recommendation: {best_analysis['analysis']}**")
-        st.write(
-            f"This analysis explains {best_analysis['total_variance_explained']:.1f}% of customer variance and provides the clearest segmentation.")
+            st.success(f"**Primary Segmentation Recommendation: {best_analysis['analysis']}**")
+            st.write(
+                f"This analysis explains {best_analysis['total_variance_explained']:.1f}% of customer variance and provides the clearest segmentation.")
 
-        st.write("**Recommended Targeting Priorities:**")
+            st.write("**Recommended Targeting Priorities:**")
 
-        # Sort segments by size for targeting recommendations
-        sorted_segments = best_analysis['sizes'].sort_values(ascending=False)
+            # Sort segments by size for targeting recommendations
+            sorted_segments = best_analysis['sizes'].sort_values(ascending=False)
 
-        for rank, (seg_id, size) in enumerate(sorted_segments.items(), 1):
-            profile = best_analysis['profiles'].loc[seg_id]
-            pct = (size / sorted_segments.sum()) * 100
+            for rank, (seg_id, size) in enumerate(sorted_segments.items(), 1):
+                profile = best_analysis['profiles'].loc[seg_id]
+                pct = (size / sorted_segments.sum()) * 100
 
-            if rank == 1:
-                priority = "🥇 **HIGH PRIORITY**"
-                recommendation = "Primary target - largest segment with clear characteristics"
-            elif rank == 2:
-                priority = "🥈 **MEDIUM PRIORITY**"
-                recommendation = "Secondary target - significant size, distinct profile"
-            else:
-                priority = "🥉 **LOW PRIORITY**"
-                recommendation = "Niche segment - specialized targeting approach"
+                if rank == 1:
+                    priority = "🥇 **HIGH PRIORITY**"
+                    recommendation = "Primary target - largest segment with clear characteristics"
+                elif rank == 2:
+                    priority = "🥈 **MEDIUM PRIORITY**"
+                    recommendation = "Secondary target - significant size, distinct profile"
+                else:
+                    priority = "🥉 **LOW PRIORITY**"
+                    recommendation = "Niche segment - specialized targeting approach"
 
-            st.markdown(f"""
-            **{priority} - Segment {seg_id}**
-            - **Size:** {size:,} customers ({pct:.1f}% of trophy buyers)
-            - **Profile:** {', '.join([f"{k}: {v}" for k, v in profile.items()])}
-            - **Strategy:** {recommendation}
-            """)
+                st.markdown(f"""
+                **{priority} - Segment {seg_id}**
+                - **Size:** {size:,} customers ({pct:.1f}% of trophy buyers)
+                - **Profile:** {', '.join([f"{k}: {v}" for k, v in profile.items()])}
+                - **Strategy:** {recommendation}
+                """)
 
-        # Additional strategic insights
-        st.subheader("💡 Key Business Insights")
+            # Additional strategic insights
+            st.subheader("💡 Key Business Insights")
 
-        total_customers = len(df)
+            total_customers = len(df)
 
-        # Age insights
-        age_dist = df['age_bin'].value_counts()
-        dominant_age = age_dist.index[0]
+            # Age insights
+            age_dist = df['age_bin'].value_counts()
+            dominant_age = age_dist.index[0]
 
-        # Gender insights
-        gender_dist = df['gender'].value_counts()
-        dominant_gender = gender_dist.index[0]
-        gender_pct = (gender_dist.iloc[0] / len(df)) * 100
+            # Gender insights
+            gender_dist = df['gender'].value_counts()
+            dominant_gender = gender_dist.index[0]
+            gender_pct = (gender_dist.iloc[0] / len(df)) * 100
 
-        # Region insights
-        region_dist = df['region'].value_counts()
-        top_region = region_dist.index[0]
-        region_pct = (region_dist.iloc[0] / len(df)) * 100
+            # Region insights
+            region_dist = df['region'].value_counts()
+            top_region = region_dist.index[0]
+            region_pct = (region_dist.iloc[0] / len(df)) * 100
 
-        insights_text = f"""
-        **Customer Base Overview:**
-        - **Dominant Age Group:** {dominant_age} years ({(age_dist.iloc[0] / total_customers) * 100:.1f}% of customers)
-        - **Gender Distribution:** {dominant_gender} represents {gender_pct:.1f}% of trophy buyers
-        - **Geographic Concentration:** {top_region} accounts for {region_pct:.1f}% of purchases
+            insights_text = f"""
+            **Customer Base Overview:**
+            - **Dominant Age Group:** {dominant_age} years ({(age_dist.iloc[0] / total_customers) * 100:.1f}% of customers)
+            - **Gender Distribution:** {dominant_gender} represents {gender_pct:.1f}% of trophy buyers
+            - **Geographic Concentration:** {top_region} accounts for {region_pct:.1f}% of purchases
 
-        **Strategic Recommendations:**
-        1. **Focus marketing campaigns** on the {dominant_age} age group and {dominant_gender} demographic
-        2. **Expand regional presence** beyond {top_region} to capture underserved markets  
-        3. **Develop targeted content** for each identified customer segment
-        4. **Optimize trophy product offerings** based on segment preferences
-        5. **Consider cross-segment promotions** to increase customer lifetime value
-        """
+            **Strategic Recommendations:**
+            1. **Focus marketing campaigns** on the {dominant_age} age group and {dominant_gender} demographic
+            2. **Expand regional presence** beyond {top_region} to capture underserved markets  
+            3. **Develop targeted content** for each identified customer segment
+            4. **Optimize trophy product offerings** based on segment preferences
+            5. **Consider cross-segment promotions** to increase customer lifetime value
+            """
 
-        st.markdown(insights_text)
+            st.markdown(insights_text)
+        else:
+            st.warning("No insights available. Please check if the trophy customer data is loading correctly.")
 
 
 if __name__ == "__main__":
