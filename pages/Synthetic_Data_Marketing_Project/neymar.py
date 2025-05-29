@@ -282,8 +282,8 @@ def main():
 
         pairs = [
             ("age_bin", "gender"),
-            ("age_bin", "region2"),
-            ("gender", "region2"),
+            ("age_bin", "region"),
+            ("gender", "region"),
         ]
 
         all_insights = []
@@ -416,7 +416,7 @@ def main():
         gender_pct = (gender_dist.iloc[0] / len(df)) * 100
 
         # Region insights
-        region_dist = df['region2'].value_counts()
+        region_dist = df['region'].value_counts()
         top_region = region_dist.index[0]
         region_pct = (region_dist.iloc[0] / len(df)) * 100
 
