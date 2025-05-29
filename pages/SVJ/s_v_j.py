@@ -5,7 +5,7 @@ from pages import (
     logistic_model,
     point_distribution,
     shot_distribution,
-    leaderboard
+    leaderboard, comparison
 )
 
 st.set_page_config(page_title="Rockets Analytics Hub", layout="wide")
@@ -19,6 +19,7 @@ else:
 # --- Sidebar selector with a "Home" default ---
 PAGES = {
     "Player Stats": player_stats.main,
+    "Player Stats 2": comparison.main, 
     "Logistic Model": logistic_model.main,
     "Point Distribution": point_distribution.main,
     "Shot Distribution": shot_distribution.main,
