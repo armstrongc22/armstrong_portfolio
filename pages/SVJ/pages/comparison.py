@@ -3,9 +3,19 @@ import pandas as pd
 import altair as alt
 from pathlib import Path
 import numpy as np
+import os
 
 # File path configuration - all CSV files are in the same directory as the script
 BASE_PATH = Path(__file__).resolve().parent
+
+
+def debug_file_loading():
+    """Debug function to check what files exist"""
+    st.write("### Debug Info: Files in directory")
+    files = list(BASE_PATH.glob("*.csv"))
+    st.write(f"Base path: {BASE_PATH}")
+    st.write(f"CSV files found: {[f.name for f in files]}")
+    return files
 
 
 def clean_sheet(path: Path) -> pd.DataFrame:
@@ -13,10 +23,24 @@ def clean_sheet(path: Path) -> pd.DataFrame:
     Read and clean CSV files with proper data type handling.
     """
     try:
+        st.write(f"Attempting to load: {path}")
+
+        # Check if file exists
+        if not path.exists():
+            st.error(f"File does not exist: {path}")
+            return pd.DataFrame()
+
         df = pd.read_csv(path)
+        st.write(f"Original shape: {df.shape}")
+        st.write(f"Original columns: {list(df.columns)}")
+
+        # Show first few rows to debug
+        st.write("First 3 rows:")
+        st.dataframe(df.head(3))
 
         # Handle different CSV structures
         if len(df.columns) > 7 and 'Player' not in df.columns:
+            st.write("Handling misaligned headers...")
             # Handle misaligned headers - assume 2nd column is player name, 4th is GP
             df['Player'] = df.iloc[:, 1].astype(str)
             if len(df.columns) > 3:
@@ -33,15 +57,28 @@ def clean_sheet(path: Path) -> pd.DataFrame:
 
         # Ensure Player column exists
         if 'Player' not in df.columns and len(df.columns) > 0:
+            st.write(f"Renaming first column '{df.columns[0]}' to 'Player'")
             df = df.rename(columns={df.columns[0]: 'Player'})
 
         # Clean player names
         if 'Player' in df.columns:
+            st.write("Before cleaning players:")
+            st.write(f"Unique players (first 10): {df['Player'].unique()[:10]}")
+
             df['Player'] = df['Player'].astype(str).str.strip()
             # Remove rows where Player is NaN, empty, or just numbers
             df = df[df['Player'].notna()]
             df = df[df['Player'] != '']
             df = df[~df['Player'].str.match(r'^\d+$', na=False)]
+
+            st.write("After cleaning players:")
+            st.write(f"Shape: {df.shape}")
+
+            # Check for our target players with fuzzy matching
+            target_players = ["Jalen Green", "Alperen Sengun"]
+            for target in target_players:
+                matches = df[df['Player'].str.contains(target.split()[0], case=False, na=False)]
+                st.write(f"Players containing '{target.split()[0]}': {matches['Player'].tolist()}")
 
         # Convert numeric columns properly
         numeric_cols = df.select_dtypes(include=['object']).columns
@@ -52,16 +89,24 @@ def clean_sheet(path: Path) -> pd.DataFrame:
         # Handle GP column specifically
         if 'GP' in df.columns:
             df['GP'] = pd.to_numeric(df['GP'], errors='coerce')
+            st.write(f"GP column stats: min={df['GP'].min()}, max={df['GP'].max()}, null_count={df['GP'].isna().sum()}")
+            before_gp_filter = len(df)
             df = df[df['GP'].notna()]  # Remove rows with invalid GP
+            st.write(f"Removed {before_gp_filter - len(df)} rows with invalid GP")
+
+        st.write(f"Final shape: {df.shape}")
+        st.write(f"Final columns: {list(df.columns)}")
 
         return df
 
     except Exception as e:
         st.error(f"Error reading {path}: {str(e)}")
+        import traceback
+        st.error(traceback.format_exc())
         return pd.DataFrame()
 
 
-# Data Loading Functions
+# Data Loading Functions - Updated with debug info
 @st.cache_data
 def load_guard_basic():
     return clean_sheet(BASE_PATH / "guard_basic.csv")
@@ -105,7 +150,12 @@ def load_pnr_big():
 # Streamlit App
 def main():
     st.set_page_config(layout="wide")
-    st.title("Player Segmentation & Ranking Explorer")
+    st.title("Player Segmentation & Ranking Explorer - DEBUG MODE")
+
+    # Add debug section
+    if st.checkbox("Show Debug Info"):
+        debug_file_loading()
+        st.write("---")
 
     # Player selection
     player = st.selectbox("Choose player", ["Jalen Green", "Alperen Sengun"])
@@ -145,6 +195,18 @@ def main():
     if 'Player' in df.columns:
         st.write(f"Number of players: {len(df)}")
 
+    # Show all players that might match our target
+    if 'Player' in df.columns:
+        st.write("### All players in dataset (first 20):")
+        st.write(df['Player'].head(20).tolist())
+
+        # Try fuzzy matching
+        target_name = player.split()[0]  # First name
+        possible_matches = df[df['Player'].str.contains(target_name, case=False, na=False)]
+        if not possible_matches.empty:
+            st.write(f"### Possible matches for '{player}':")
+            st.write(possible_matches['Player'].tolist())
+
     # Filter: drop GP<50 except chosen player (if GP column exists)
     if 'GP' in df.columns:
         original_size = len(df)
@@ -156,7 +218,23 @@ def main():
     # Check if our chosen player is in the dataset
     if player not in df['Player'].values:
         st.warning(f"{player} not found in this dataset")
-        return
+
+        # Try alternative matching
+        if 'Player' in df.columns:
+            # Try first name only
+            first_name = player.split()[0]
+            matches = df[df['Player'].str.contains(first_name, case=False, na=False)]
+            if not matches.empty:
+                st.write(f"Found players with first name '{first_name}':")
+                for idx, row in matches.iterrows():
+                    st.write(f"- {row['Player']}")
+
+                # Use the first match
+                actual_name = matches.iloc[0]['Player']
+                st.info(f"Using '{actual_name}' instead of '{player}'")
+                player = actual_name
+            else:
+                return
 
     # Choose statistic (exclude meta columns)
     exclude = {'Player', 'GP', 'Min', 'W', 'L', 'Age', 'Team'}
@@ -165,14 +243,16 @@ def main():
 
     if not stats:
         st.error("No numeric statistics found in this dataset")
+        st.write("Available columns:", df.columns.tolist())
         return
 
     stat = st.selectbox("Choose statistic to visualize", stats)
 
     # Display some info about the selected statistic
     if stat in df.columns:
-        player_value = df[df['Player'] == player][stat].iloc[0] if len(df[df['Player'] == player]) > 0 else None
-        if player_value is not None:
+        player_row = df[df['Player'] == player]
+        if len(player_row) > 0:
+            player_value = player_row[stat].iloc[0]
             rank = (df[stat] > player_value).sum() + 1
             total = len(df)
             st.write(f"{player}'s {stat}: **{player_value:.3f}** (Rank: {rank}/{total})")
