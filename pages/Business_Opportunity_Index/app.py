@@ -7,12 +7,12 @@ import boi.config as cfg
 st.title("High Foot-Traffic Hexes  ×  Opportunity Gap")
 st.markdown(
         """
-        *Welcome to the *Business Opportunity Index*.  
+        **Welcome to the *Business Opportunity Index**.  
         This application is designed to identify city segments that where opening a new laundromat would meet underserved demand.
         The opportunity score combines demand-side indiccators like population and income with supply-side counts of the number of laundromats and foot-traffic in that area. 
         Further improvement will be increasing the amount of cities and business types available, and adding the apporximate income of the area to the opportunity score.
         
-        *Method* 
+        **Method**
         1. **Data Ingestion** - three modules fetch data for each city and stores them locally as CSVs and in the Cloud via Confluent and BigQuery. 
         The data is ingested through the World Bank API, the Open Street Map API, and the Foursquare Places API. From the World Bank we take the total population and GDP per capita for each city.
         Open Street Map allowes us to count how many laundromats are within 10km raidus of the city center. 10km is the most the rate-limit will` allow and future iterations will look to expand the radius of the system.
@@ -28,7 +28,7 @@ st.markdown(
         
         5. **Visualization** -The map leverages h3 hex resolution, geopandas/shapely for polygon construction, and pydeck for rendering the WebGL map. 
         
-        *Results*
+        **Results**
         This project establishes a scalable approach to visualizing the business opportunities in areas that an investor might not be able to reach. Being able to prospect emerging markets and identify what goods and services are in demand can streamline decision making decrease time to close.  
         
         """
