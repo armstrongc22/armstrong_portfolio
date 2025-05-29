@@ -21,172 +21,6 @@ def get_available_files():
     return file_mapping
 
 
-def clean_sheet(path: Path) -> pd.DataFrame:
-    """
-    Read and clean CSV files with proper data type handling.
-    """
-    try:
-        st.write(f"Attempting to load: {path}")
-
-        # Check if file exists
-        if not path.exists():
-            st.error(f"File does not exist: {path}")
-            return pd.DataFrame()
-
-        df = pd.read_csv(path)
-        st.write(f"Original shape: {df.shape}")
-        st.write(f"Original columns: {list(df.columns)}")
-
-        # Show first few rows to debug
-        st.write("First 3 rows:")
-        st.dataframe(df.head(3))
-
-        # Clean column names first
-        df.columns = df.columns.str.strip()
-
-        # Handle different possible column names for Player
-        possible_player_cols = ['Player', 'PLAYER', 'player', 'Name', 'NAME', 'name']
-        player_col = None
-
-        for col in possible_player_cols:
-            if col in df.columns:
-                player_col = col
-                break
-
-        if player_col and player_col != 'Player':
-            df = df.rename(columns={player_col: 'Player'})
-            st.write(f"Renamed '{player_col}' to 'Player'")
-        elif not player_col and len(df.columns) > 0:
-            # Assume first column is player name
-            df = df.rename(columns={df.columns[0]: 'Player'})
-            st.write(f"Assumed first column '{df.columns[0]}' is Player")
-
-        # Clean player names
-        if 'Player' in df.columns:
-            st.write("Before cleaning players:")
-            st.write(f"Unique players (first 10): {df['Player'].unique()[:10]}")
-
-            df['Player'] = df['Player'].astype(str).str.strip()
-            # Remove rows where Player is NaN, empty, or just numbers
-            df = df[df['Player'].notna()]
-            df = df[df['Player'] != '']
-            df = df[df['Player'] != 'nan']
-            df = df[~df['Player'].str.match(r'^\d+\.?\d*$', na=False)]  # Remove pure numbers
-
-            st.write("After cleaning players:")
-            st.write(f"Shape: {df.shape}")
-            st.write(f"Sample players: {df['Player'].head(10).tolist()}")
-
-        # Handle GP column specifically
-        possible_gp_cols = ['GP', 'G', 'Games', 'GAMES']
-        gp_col = None
-
-        for col in possible_gp_cols:
-            if col in df.columns:
-                gp_col = col
-                break
-
-        if gp_col and gp_col != 'GP':
-            df = df.rename(columns={gp_col: 'GP'})
-            st.write(f"Renamed '{gp_col}' to 'GP'")
-
-        # Convert numeric columns properly
-        for col in df.columns:
-            if col != 'Player':
-                df[col] = pd.to_numeric(df[col], errors='coerce')
-
-        # Handle GP column validation
-        if 'GP' in df.columns:
-            df['GP'] = pd.to_numeric(df['GP'], errors='coerce')
-            st.write(f"GP column stats: min={df['GP'].min()}, max={df['GP'].max()}, null_count={df['GP'].isna().sum()}")
-            before_gp_filter = len(df)
-            df = df[df['GP'].notna()]  # Remove rows with invalid GP
-            st.write(f"Removed {before_gp_filter - len(df)} rows with invalid GP")
-
-        st.write(f"Final shape: {df.shape}")
-        st.write(f"Final columns: {list(df.columns)}")
-
-        return df
-
-    except Exception as e:
-        st.error(f"Error reading {path}: {str(e)}")
-        import traceback
-        st.error(traceback.format_exc())
-        return pd.DataFrame()
-
-
-def find_player_in_dataframe(df, target_player):
-    """Find a player in the dataframe using fuzzy matching"""
-    if 'Player' not in df.columns:
-        return None, None
-
-    # Exact match first
-    exact_match = df[df['Player'] == target_player]
-    if not exact_match.empty:
-        return target_player, exact_match
-
-    # Try case-insensitive match
-    case_match = df[df['Player'].str.lower() == target_player.lower()]
-    if not case_match.empty:
-        return case_match.iloc[0]['Player'], case_match
-
-    # Try partial matches
-    target_parts = target_player.lower().split()
-    for part in target_parts:
-        if len(part) > 2:  # Only use meaningful parts
-            partial_matches = df[df['Player'].str.lower().str.contains(part, na=False)]
-            if not partial_matches.empty:
-                return partial_matches.iloc[0]['Player'], partial_matches
-
-    return None, None
-
-
-# Streamlit App
-def main():
-    st.set_page_config(layout="wide")
-    st.title("Player Segmentation & Ranking Explorer - FIXED VERSION")
-
-    # Get available files
-    file_mapping = get_available_files()
-
-    # Debug section
-    if st.checkbox("Show Debug Info"):
-        st.write("### Debug Info: Available CSV Files")
-        st.write(f"Base path: {BASE_PATH}")
-        st.write(f"Available files: {list(file_mapping.keys())}")
-        st.write("---")
-
-    # Player selection
-    player = st.selectbox("Choose player", ["Jalen Green", "Alperen Sengun"])
-
-    # Define segment mappings with flexible file name matching
-    segment_file_mapping = {
-        "Guard Basic": ["guard_basic", "guard_basics", "guards_basic"],
-        "Guard Advanced": ["guard_advanced", "guards_advanced"],
-        "Isolation": ["isolation", "iso"],
-        "Pick & Roll Handler": ["pnr_handler", "pick_roll_handler", "pickroll_handler"],
-        "Center Basic": ["centers_basics", "center_basic", "centers_basic"],
-        "Center Advanced": ["centers_advancedimport streamlit as st
-import pandas as pd
-import altair as alt
-from pathlib import Path
-import numpy as np
-import os
-
-# File path configuration - all CSV files are in the same directory as the script
-BASE_PATH = Path(__file__).resolve().parent
-
-def get_available_files():
-    """Get all CSV files and create a mapping"""
-    files = list(BASE_PATH.glob("*.csv"))
-    file_mapping = {}
-
-    for file in files:
-        name = file.stem.lower()  # Get filename without extension, lowercase
-        file_mapping[name] = file
-
-    return file_mapping
-
 def clean_sheet(path: Path, segment: str = "") -> pd.DataFrame:
     """
     Read and clean CSV files with proper data type handling.
@@ -230,6 +64,7 @@ def clean_sheet(path: Path, segment: str = "") -> pd.DataFrame:
             df = df[df['Player'] != 'nan']
             df = df[~df['Player'].str.match(r'^\d+\.?\d*
 
+
 def find_player_in_dataframe(df, target_player):
     """Find a player in the dataframe using fuzzy matching"""
     if 'Player' not in df.columns:
@@ -254,6 +89,7 @@ def find_player_in_dataframe(df, target_player):
                 return partial_matches.iloc[0]['Player'], partial_matches
 
     return None, None
+
 
 # Streamlit App
 def main():
@@ -420,38 +256,42 @@ def main():
         st.write("Data preview:")
         st.dataframe(df.head())
 
+
 if __name__ == "__main__":
-    main(), na=False)]  # Remove pure numbers
+    main(), na = False)]  # Remove pure numbers
 
-        # Handle GP column specifically
-        possible_gp_cols = ['GP', 'G', 'Games', 'GAMES']
-        gp_col = None
+    # Handle GP column specifically
+    possible_gp_cols = ['GP', 'G', 'Games', 'GAMES']
+    gp_col = None
 
-        for col in possible_gp_cols:
-            if col in df.columns:
-                gp_col = col
-                break
+    for col in possible_gp_cols:
+        if
+    col in df.columns: \
+        gp_col = col
+    break
 
-        if gp_col and gp_col != 'GP':
-            df = df.rename(columns={gp_col: 'GP'})
+    if gp_col and gp_col != 'GP':
+        df = df.rename(columns={gp_col: 'GP'})
 
-        # Convert numeric columns properly
-        for col in df.columns:
-            if col != 'Player':
-                df[col] = pd.to_numeric(df[col], errors='coerce')
+    # Convert numeric columns properly
+    for col in df.columns:
+        if col != 'Player':
+            df[col] = pd.to_numeric(df[col], errors='coerce')
 
-        # Handle GP column validation
-        if 'GP' in df.columns:
-            df['GP'] = pd.to_numeric(df['GP'], errors='coerce')
-            df = df[df['GP'].notna()]  # Remove rows with invalid GP
+    # Handle GP column validation
+    if 'GP' in df.columns:
+        df['GP'] = pd.to_numeric(df['GP'], errors='coerce')
+        df = df[df['GP'].notna()]  # Remove rows with invalid GP
 
-        return df
+    return df
 
-    except Exception as e:
-        st.error(f"Error reading {path}: {str(e)}")
-        import traceback
-        st.error(traceback.format_exc())
-        return pd.DataFrame()
+except Exception as e:
+st.error(f"Error reading {path}: {str(e)}")
+import traceback
+
+st.error(traceback.format_exc())
+return pd.DataFrame()
+
 
 def find_player_in_dataframe(df, target_player):
     """Find a player in the dataframe using fuzzy matching"""
@@ -477,6 +317,7 @@ def find_player_in_dataframe(df, target_player):
                 return partial_matches.iloc[0]['Player'], partial_matches
 
     return None, None
+
 
 # Streamlit App
 def main():
@@ -652,6 +493,7 @@ def main():
         st.error(f"Error creating chart: {str(e)}")
         st.write("Data preview:")
         st.dataframe(df.head())
+
 
 if __name__ == "__main__":
     main()
