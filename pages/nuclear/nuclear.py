@@ -7,7 +7,7 @@ import numpy as np
 import os
 
 # Define the path to your CSV file
-NUCLEAR = os.path.join("data", "wn_all_countries_reactors.csv")
+NUCLEAR = os.path.join("nuclear", "wn_all_countries_reactors.csv")
 
 # Country coordinates for mapping (you can expand this based on your data)
 COUNTRY_COORDS = {
