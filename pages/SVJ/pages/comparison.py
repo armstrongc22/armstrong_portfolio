@@ -37,16 +37,30 @@ def clean_sheet(path: Path, segment: str = "") -> pd.DataFrame:
         st.write(f"DEBUG: First few rows:")
         st.dataframe(df.head())
 
-        # Special handling for centers_advanced - drop first column
-        if "center" in segment.lower() and "advanced" in segment.lower():
+        # Special handling for datasets that need column shifting
+        needs_column_shift = (
+                ("guard" in segment.lower() and "basic" in segment.lower()) or
+                ("guard" in segment.lower() and "advanced" in segment.lower()) or
+                ("center" in segment.lower() and "basic" in segment.lower())
+        )
+
+        if needs_column_shift:
+            st.write(f"DEBUG: Applying column shift fix for {segment}")
+            # Drop the first column (which contains row indices)
             df = df.drop(df.columns[0], axis=1)
             st.write(f"DEBUG: After dropping first column: {df.shape}")
+            st.write(f"DEBUG: New columns: {df.columns.tolist()}")
+
+        # Special handling for centers_advanced - drop first column (this was already in your code)
+        elif "center" in segment.lower() and "advanced" in segment.lower():
+            df = df.drop(df.columns[0], axis=1)
+            st.write(f"DEBUG: After dropping first column for centers_advanced: {df.shape}")
 
         # Clean column names first
         df.columns = df.columns.str.strip()
 
         # Handle different possible column names for Player
-        possible_player_cols = ['Player', 'PLAYER', 'player', 'Name', 'NAME', 'name']
+        possible_player_cols = ['Player', 'PLAYER', 'player', 'Name', 'NAME', 'name', 'Team', 'TEAM', 'team']
         player_col = None
 
         for col in possible_player_cols:
@@ -77,7 +91,8 @@ def clean_sheet(path: Path, segment: str = "") -> pd.DataFrame:
             st.write(f"DEBUG: Using first column '{df.columns[0]}' as Player column")
 
         st.write(f"DEBUG: After player column handling: {df.shape}")
-        st.write(f"DEBUG: Player column sample values: {df['Player'].head(10).tolist()}")
+        if 'Player' in df.columns:
+            st.write(f"DEBUG: Player column sample values: {df['Player'].head(10).tolist()}")
 
         # Clean player names - LESS AGGRESSIVE CLEANING
         if 'Player' in df.columns:
