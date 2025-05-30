@@ -29,6 +29,17 @@ def create_nuclear_choropleth(df_reactors):
     # Count reactors by country
     reactor_counts = df_reactors.groupby('Country').size().reset_index(name='Reactor_Count')
 
+    # Normalize country names to handle variations
+    def normalize_country_name(name):
+        name = str(name).strip()
+        # Handle common US variations
+        if name.lower() in ['usa', 'us', 'united states', 'united states of america', 'u.s.', 'u.s.a.']:
+            return 'United States'
+        return name
+
+    # Apply normalization
+    reactor_counts['Country'] = reactor_counts['Country'].apply(normalize_country_name)
+
     # Country to ISO code mapping (add more as needed)
     country_iso_map = {
         'Argentina': 'ARG',
@@ -60,8 +71,7 @@ def create_nuclear_choropleth(df_reactors):
         'Switzerland': 'CHE',
         'Ukraine': 'UKR',
         'United Kingdom': 'GBR',
-        'United States': 'USA',
-        'USA': 'USA'
+        'United States': 'USA'
     }
 
     # Add ISO codes
@@ -149,6 +159,11 @@ if page == "Home":
         # You'll need to adjust this path to match your actual data file
         # This assumes you have a CSV file with reactor data including a 'Country' column
         df_reactors = pd.read_csv(NUCLEAR)  # Adjust path as needed
+
+        # Debug: Show unique country names
+        st.write("**Debug Info:** Countries found in data:")
+        country_counts = df_reactors.groupby('Country').size().reset_index(name='Count')
+        st.dataframe(country_counts)
 
         st.subheader("Global Nuclear Reactor Distribution")
         fig = create_nuclear_choropleth(df_reactors)
