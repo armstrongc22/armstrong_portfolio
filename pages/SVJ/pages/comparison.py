@@ -32,10 +32,13 @@ def clean_sheet(path: Path, segment: str = "") -> pd.DataFrame:
             return pd.DataFrame()
 
         df = pd.read_csv(path)
+        st.write(f"DEBUG: Original dataset shape: {df.shape}")
+        st.write(f"DEBUG: Original columns: {df.columns.tolist()}")
 
         # Special handling for centers_advanced - drop first column
         if "center" in segment.lower() and "advanced" in segment.lower():
             df = df.drop(df.columns[0], axis=1)
+            st.write(f"DEBUG: After dropping first column: {df.shape}")
 
         # Clean column names first
         df.columns = df.columns.str.strip()
@@ -55,17 +58,26 @@ def clean_sheet(path: Path, segment: str = "") -> pd.DataFrame:
             # Assume first column is player name
             df = df.rename(columns={df.columns[0]: 'Player'})
 
-        # Clean player names
+        st.write(f"DEBUG: After player column handling: {df.shape}")
+
+        # Clean player names - LESS AGGRESSIVE CLEANING
         if 'Player' in df.columns:
+            original_size = len(df)
             df['Player'] = df['Player'].astype(str).str.strip()
-            # Remove rows where Player is NaN, empty, or just numbers
+
+            # Only remove obvious invalid entries
             df = df[df['Player'].notna()]
             df = df[df['Player'] != '']
             df = df[df['Player'] != 'nan']
-            df = df[~df['Player'].str.match(r'^\d+\.?\d*$', na=False)]  # Remove pure numbers
+            df = df[df['Player'] != 'NaN']
+
+            # REMOVED: The regex that removes numbers - this was too aggressive
+            # df = df[~df['Player'].str.match(r'^\d+\.?\d*$', na=False)]
+
+            st.write(f"DEBUG: After basic player cleaning - from {original_size} to {len(df)} rows")
 
         # Handle GP column specifically
-        possible_gp_cols = ['GP', 'G', 'Games', 'GAMES']
+        possible_gp_cols = ['GP', 'G', 'Games', 'GAMES', 'MIN', 'Mp', 'MP']
         gp_col = None
 
         for col in possible_gp_cols:
@@ -81,11 +93,15 @@ def clean_sheet(path: Path, segment: str = "") -> pd.DataFrame:
             if col != 'Player':
                 df[col] = pd.to_numeric(df[col], errors='coerce')
 
-        # Handle GP column validation
+        # Handle GP column validation - LESS STRICT
         if 'GP' in df.columns:
+            original_size = len(df)
             df['GP'] = pd.to_numeric(df['GP'], errors='coerce')
-            df = df[df['GP'].notna()]  # Remove rows with invalid GP
+            # Don't remove NaN GP values - just set them to 0 or leave them
+            df['GP'] = df['GP'].fillna(0)
+            st.write(f"DEBUG: After GP handling - from {original_size} to {len(df)} rows")
 
+        st.write(f"DEBUG: Final cleaned dataset shape: {df.shape}")
         return df
 
     except Exception as e:
@@ -129,12 +145,11 @@ def main():
     # Get available files
     file_mapping = get_available_files()
 
-    # Debug section
-    if st.checkbox("Show Debug Info"):
-        st.write("### Debug Info: Available CSV Files")
-        st.write(f"Base path: {BASE_PATH}")
-        st.write(f"Available files: {list(file_mapping.keys())}")
-        st.write("---")
+    # Debug section - ALWAYS SHOW for troubleshooting
+    st.write("### Debug Info: Available CSV Files")
+    st.write(f"Base path: {BASE_PATH}")
+    st.write(f"Available files: {list(file_mapping.keys())}")
+    st.write("---")
 
     # Player selection
     player = st.selectbox("Choose player", ["Jalen Green", "Alperen Sengun"])
@@ -202,15 +217,20 @@ def main():
         st.info(f"Using '{found_player}' (found as match for '{player}')")
         player = found_player
 
-    # Determine if we should filter by GP (only for non-basic segments)
+    # MODIFIED: Less aggressive GP filtering
     is_basic_segment = "basic" in segment.lower()
 
     if not is_basic_segment and 'GP' in df.columns:
         original_size = len(df)
-        df = df[(df['GP'] >= 50) | (df['Player'] == player)]
-        filtered_size = len(df)
-        if original_size != filtered_size:
-            st.info(f"Filtered to {filtered_size} players (GP ≥ 50 or selected player)")
+        # CHANGED: Lower GP threshold and handle missing GP values better
+        df_filtered = df[(df['GP'] >= 20) | (df['Player'] == player) | (df['GP'].isna())]
+        if len(df_filtered) > 5:  # Only apply filter if we still have reasonable data
+            df = df_filtered
+            filtered_size = len(df)
+            if original_size != filtered_size:
+                st.info(f"Filtered to {filtered_size} players (GP ≥ 20 or selected player)")
+        else:
+            st.info("Skipping GP filter to preserve data")
     elif is_basic_segment:
         st.info("Showing all players (no GP filter applied for basic stats)")
 
@@ -223,6 +243,8 @@ def main():
         st.error("No numeric statistics found in this dataset")
         st.write("Available columns:", df.columns.tolist())
         st.write("Numeric columns:", numeric_cols.tolist())
+        st.write("Sample data:")
+        st.dataframe(df.head())
         return
 
     stat = st.selectbox("Choose statistic to visualize", stats)
