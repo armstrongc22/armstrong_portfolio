@@ -9,11 +9,13 @@ st.set_page_config(
 )
 
 # ─── Title & Intro ─────────────────────────────────────────────────────────────
-st.title("🚀 Armstrong’s Data Portfolio")
+st.title("🚀 Christian Armstrong’s Data Portfolio")
 st.markdown(
     """
-    Welcome!  Here you’ll find four deep-dive dashboard projects I’ve built  
-    in Streamlit—click any card below to explore.
+    Welcome! Below you will find data projects that showcase my committment to distilling and synthesizing actionable insights from data.
+    This versatile portfolio uses a variety of tools to simplify complex problems in sports, market research, business intelligence, and marketing.
+    My hope is that in one of these you will find a relatable problem that I have shown the capacity to solve using statistical, geospatial, or visual analysis.
+    Perhaps a mix of all three! I am confident that whatever data related issue you find yourself needing a data scientist for, I can be of service. Please email me at cvarmstrong1993@gmail.com or phalanxneymaranalytics@gmail.com for queries or more information. 
     """,
     unsafe_allow_html=True
 )
@@ -42,7 +44,7 @@ projects = [
         "url": "https://armstrongportfolio-mq3htsuzxwozs2gmfwgrre.streamlit.app"
     },
     {
-        "name": "Synthetic Data Marketing(Desktop Only)",
+        "name": "Synthetic Data Marketing",
         "thumb": IMG_DIR / "neymar.png",
         "url": "https://armstrongportfolio-febhp4fxhsde5csvsgzrbx.streamlit.app/"
     },
