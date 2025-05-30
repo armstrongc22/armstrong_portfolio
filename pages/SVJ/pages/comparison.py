@@ -32,10 +32,6 @@ def clean_sheet(path: Path, segment: str = "") -> pd.DataFrame:
             return pd.DataFrame()
 
         df = pd.read_csv(path)
-        st.write(f"DEBUG: Original dataset shape: {df.shape}")
-        st.write(f"DEBUG: Original columns: {df.columns.tolist()}")
-        st.write(f"DEBUG: First few rows:")
-        st.dataframe(df.head())
 
         # Special handling for datasets that need column header shifting
         needs_header_shift = (
@@ -45,9 +41,6 @@ def clean_sheet(path: Path, segment: str = "") -> pd.DataFrame:
         )
 
         if needs_header_shift:
-            st.write(f"DEBUG: Applying column header shift fix for {segment}")
-            st.write(f"DEBUG: Original columns: {df.columns.tolist()}")
-
             # Shift column headers one position to the right
             # First, get the current column names
             original_columns = df.columns.tolist()
@@ -61,13 +54,9 @@ def clean_sheet(path: Path, segment: str = "") -> pd.DataFrame:
             # Now drop the Index column (first column) which contains row indices
             df = df.drop('Index', axis=1)
 
-            st.write(f"DEBUG: After header shift and index removal: {df.shape}")
-            st.write(f"DEBUG: New columns: {df.columns.tolist()}")
-
-        # Special handling for centers_advanced - drop first column (this was already in your code)
+        # Special handling for centers_advanced - drop first column
         elif "center" in segment.lower() and "advanced" in segment.lower():
             df = df.drop(df.columns[0], axis=1)
-            st.write(f"DEBUG: After dropping first column for centers_advanced: {df.shape}")
 
         # Clean column names first
         df.columns = df.columns.str.strip()
@@ -83,17 +72,14 @@ def clean_sheet(path: Path, segment: str = "") -> pd.DataFrame:
 
         # If no obvious player column found, check all columns for one that contains actual names
         if not player_col:
-            st.write("DEBUG: No obvious player column found, checking all columns...")
             for col in df.columns:
                 sample_values = df[col].dropna().astype(str).head(10).tolist()
-                st.write(f"DEBUG: Column '{col}' sample values: {sample_values}")
 
                 # Check if this column contains names (not just numbers)
                 non_numeric_count = sum(
                     1 for val in sample_values if not str(val).replace('.', '').replace('-', '').isdigit())
                 if non_numeric_count > len(sample_values) * 0.5:  # More than 50% non-numeric
                     player_col = col
-                    st.write(f"DEBUG: Using '{col}' as player column (has {non_numeric_count} non-numeric values)")
                     break
 
         if player_col and player_col != 'Player':
@@ -101,15 +87,9 @@ def clean_sheet(path: Path, segment: str = "") -> pd.DataFrame:
         elif not player_col and len(df.columns) > 0:
             # Last resort: assume first column is player name
             df = df.rename(columns={df.columns[0]: 'Player'})
-            st.write(f"DEBUG: Using first column '{df.columns[0]}' as Player column")
-
-        st.write(f"DEBUG: After player column handling: {df.shape}")
-        if 'Player' in df.columns:
-            st.write(f"DEBUG: Player column sample values: {df['Player'].head(10).tolist()}")
 
         # Clean player names - LESS AGGRESSIVE CLEANING
         if 'Player' in df.columns:
-            original_size = len(df)
             df['Player'] = df['Player'].astype(str).str.strip()
 
             # Only remove obvious invalid entries
@@ -117,9 +97,6 @@ def clean_sheet(path: Path, segment: str = "") -> pd.DataFrame:
             df = df[df['Player'] != '']
             df = df[df['Player'] != 'nan']
             df = df[df['Player'] != 'NaN']
-
-            # Don't remove numeric values yet - let's see what we have first
-            st.write(f"DEBUG: After basic player cleaning - from {original_size} to {len(df)} rows")
 
         # Handle GP column specifically
         possible_gp_cols = ['GP', 'G', 'Games', 'GAMES', 'MIN', 'Mp', 'MP']
@@ -140,13 +117,10 @@ def clean_sheet(path: Path, segment: str = "") -> pd.DataFrame:
 
         # Handle GP column validation - LESS STRICT
         if 'GP' in df.columns:
-            original_size = len(df)
             df['GP'] = pd.to_numeric(df['GP'], errors='coerce')
             # Don't remove NaN GP values - just set them to 0 or leave them
             df['GP'] = df['GP'].fillna(0)
-            st.write(f"DEBUG: After GP handling - from {original_size} to {len(df)} rows")
 
-        st.write(f"DEBUG: Final cleaned dataset shape: {df.shape}")
         return df
 
     except Exception as e:
@@ -154,7 +128,6 @@ def clean_sheet(path: Path, segment: str = "") -> pd.DataFrame:
         import traceback
         st.error(traceback.format_exc())
         return pd.DataFrame()
-
 
 def find_player_in_dataframe(df, target_player):
     """Find a player in the dataframe using fuzzy matching"""
