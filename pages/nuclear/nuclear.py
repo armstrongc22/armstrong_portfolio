@@ -102,8 +102,27 @@ def create_nuclear_heatmap(df):
     # Process data
     country_data = process_reactor_data(df)
 
+    # Check if we have valid data
+    if country_data.empty:
+        st.error("No valid country data found for mapping")
+        return go.Figure()
+
+    # Debug: Show processed data
+    st.write("Debug: Processed country data:")
+    st.write(country_data)
+
+    # Clean and validate the data
+    country_data = country_data.fillna(0)
+
+    # Ensure we have positive values for size calculations
+    country_data.loc[country_data['Total_Capacity_MW'] <= 0, 'Total_Capacity_MW'] = 1
+
     # Create the heat map using plotly
     fig = go.Figure()
+
+    # Calculate marker sizes safely
+    marker_sizes = np.sqrt(country_data['Total_Capacity_MW'].clip(lower=1)) / 30
+    marker_sizes = np.clip(marker_sizes, 8, 50)  # Ensure sizes are within bounds
 
     # Add the world map base
     fig.add_trace(go.Scattergeo(
@@ -117,62 +136,39 @@ def create_nuclear_heatmap(df):
                                 f"Generation: {row['Total_Generation_GWh']:,.0f} GWh", axis=1),
         mode='markers',
         marker=dict(
-            size=np.sqrt(country_data['Total_Capacity_MW']) / 30,  # Scale marker size
+            size=marker_sizes,
             color=country_data['Total_Capacity_MW'],
-            colorscale=[
-                [0, '#000000'],  # Black
-                [0.3, '#003300'],  # Dark green
-                [0.5, '#00ff41'],  # Neon green
-                [0.8, '#66ff66'],  # Light green
-                [1.0, '#ffffff']  # White
-            ],
+            colorscale='Viridis',  # Use a simpler colorscale
             colorbar=dict(
-                title="<b>Capacity (MW)</b>",
-                titlefont=dict(color='white'),
-                tickfont=dict(color='white'),
-                bgcolor='rgba(0,0,0,0.8)',
-                bordercolor='#00ff41',
-                borderwidth=1
+                title="Capacity (MW)",
             ),
-            line=dict(color='#00ff41', width=2),
+            line=dict(color='white', width=1),
             sizemode='diameter',
-            sizemin=8,
-            sizemax=50,
-            opacity=0.9
+            opacity=0.8
         ),
         hovertemplate='%{text}<extra></extra>',
         showlegend=False
     ))
 
-    # Update layout with dark theme
+    # Update layout with simpler styling
     fig.update_layout(
         title=dict(
-            text="<b>GLOBAL NUCLEAR REACTOR HEAT MAP</b>",
-            font=dict(size=24, color='white'),
+            text="GLOBAL NUCLEAR REACTOR HEAT MAP",
+            font=dict(size=24),
             x=0.5,
             y=0.95
         ),
         geo=dict(
             projection_type='natural earth',
             showland=True,
-            landcolor='rgb(20, 20, 20)',
+            landcolor='lightgray',
             showocean=True,
-            oceancolor='rgb(0, 0, 0)',
-            showlakes=True,
-            lakecolor='rgb(0, 0, 0)',
-            showrivers=True,
-            rivercolor='rgb(0, 0, 0)',
-            coastlinecolor='rgb(0, 255, 65)',
-            coastlinewidth=1,
-            countrycolor='rgb(0, 100, 0)',
-            countrywidth=0.5,
+            oceancolor='lightblue',
+            coastlinecolor='gray',
+            countrycolor='gray',
             showframe=False,
             showcoastlines=True,
-            bgcolor='black'
         ),
-        paper_bgcolor='black',
-        plot_bgcolor='black',
-        font=dict(color='white'),
         height=600,
         margin=dict(l=0, r=0, t=60, b=0)
     )
