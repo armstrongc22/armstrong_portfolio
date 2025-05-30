@@ -160,11 +160,6 @@ if page == "Home":
         # This assumes you have a CSV file with reactor data including a 'Country' column
         df_reactors = pd.read_csv(NUCLEAR)  # Adjust path as needed
 
-        # Debug: Show unique country names
-        st.write("**Debug Info:** Countries found in data:")
-        country_counts = df_reactors.groupby('Country').size().reset_index(name='Count')
-        st.dataframe(country_counts)
-
         st.subheader("Global Nuclear Reactor Distribution")
         fig = create_nuclear_choropleth(df_reactors)
         st.plotly_chart(fig, use_container_width=True)
