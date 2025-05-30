@@ -57,15 +57,30 @@ def process_reactor_data(df):
     df['Capacity (MWe)'] = pd.to_numeric(df['Capacity (MWe)'], errors='coerce')
     df['Net Capacity (MWe)'] = pd.to_numeric(df['Net Capacity (MWe)'], errors='coerce')
 
+    # Clean the Load Factor column - convert to numeric
+    df['Load Factor (2023) (%)'] = pd.to_numeric(df['Load Factor (2023) (%)'], errors='coerce')
+
+    # Clean the Electricity Generated column - convert to numeric
+    df['Electricity Generated (2023) (GWh)'] = pd.to_numeric(df['Electricity Generated (2023) (GWh)'], errors='coerce')
+
     # Use Net Capacity if available, otherwise use Capacity
     df['Total_Capacity'] = df['Net Capacity (MWe)'].fillna(df['Capacity (MWe)'])
 
-    # Group by country
-    country_stats = df.groupby('Country').agg({
-        'Total_Capacity': ['sum', 'count'],
-        'Load Factor (2023) (%)': 'mean',
-        'Electricity Generated (2023) (GWh)': 'sum'
-    }).round(2)
+    # Group by country with proper error handling
+    try:
+        country_stats = df.groupby('Country').agg({
+            'Total_Capacity': ['sum', 'count'],
+            'Load Factor (2023) (%)': 'mean',
+            'Electricity Generated (2023) (GWh)': 'sum'
+        }).round(2)
+    except Exception as e:
+        # If there's still an error, create a simpler aggregation
+        country_stats = df.groupby('Country').agg({
+            'Total_Capacity': ['sum', 'count']
+        }).round(2)
+        # Add empty columns for the problematic ones
+        country_stats[('Load Factor (2023) (%)', 'mean')] = 0
+        country_stats[('Electricity Generated (2023) (GWh)', 'sum')] = 0
 
     # Flatten column names
     country_stats.columns = ['Total_Capacity_MW', 'Reactor_Count', 'Avg_Load_Factor', 'Total_Generation_GWh']
@@ -308,6 +323,15 @@ def main():
     # Load your actual CSV data
     try:
         df = pd.read_csv(NUCLEAR)
+
+        # Debug: Display column names and first few rows
+        st.write("Debug: CSV Columns found:")
+        st.write(df.columns.tolist())
+        st.write("Debug: First 5 rows:")
+        st.write(df.head())
+        st.write("Debug: Data types:")
+        st.write(df.dtypes)
+
     except FileNotFoundError:
         st.error(f"Data file not found at: {NUCLEAR}")
         st.info("Please ensure the CSV file exists in the correct location.")
