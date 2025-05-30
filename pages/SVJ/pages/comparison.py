@@ -194,20 +194,6 @@ def main():
     choices = segs[player]
     segment = st.selectbox("Choose segment", choices)
 
-    # Find the correct file for the selected segment
-    segment_file = None
-    for possible_name in segment_file_mapping[segment]:
-        if possible_name in file_mapping:
-            segment_file = file_mapping[possible_name]
-            break
-
-    # Load the chosen dataset
-    with st.spinner(f"Loading {segment} data from {segment_file.name}..."):
-        df = clean_sheet(segment_file, segment)
-
-    if df.empty:
-        st.error(f"Could not load data for {segment}. The file exists but contains no valid data.")
-        return
 
     # Find the player in the dataset
     found_player, player_data = find_player_in_dataframe(df, player)
