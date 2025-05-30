@@ -17,7 +17,7 @@ st.markdown(
     My hope is that in one of these you will find a relatable problem that I have shown the capacity to solve using statistical, geospatial, or visual analysis.
     Perhaps a mix of all three! I am confident that whatever data related issue you find yourself needing a data scientist for, I can be of service. Please email me at cvarmstrong1993@gmail.com or phalanxneymaranalytics@gmail.com for queries or more information. 
     
-    If you see a snoozing emoji simply click the blue button to wake the app back up and everything should work fine. For the Segment section of the synthetic data project I recommend checking the box to complete the analysis to see the full visualizaitons. 
+    If you see a snoozing emoji simply click the blue button to wake the app back up and everything should work fine. For the Segment section of the synthetic data project I recommend checking the box to complete the analysis to see the full visualizaiton. 
     """,
     unsafe_allow_html=True
 )
