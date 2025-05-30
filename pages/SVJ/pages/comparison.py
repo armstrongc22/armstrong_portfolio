@@ -160,7 +160,7 @@ def main():
     BASE = Path(__file__).resolve().parent  # pages/SVJ/pages
     img_path = BASE / "output.png"
     st.image(str(img_path), use_container_width=True)
-    st.set_page_config(layout="wide")
+    
     st.title("Player Segmentation & Ranking Explorer")
 
     # Get available files
