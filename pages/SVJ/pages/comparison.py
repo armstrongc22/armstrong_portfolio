@@ -4,7 +4,7 @@ import altair as alt
 from pathlib import Path
 import numpy as np
 import os
-
+from pathlib import Path
 # File path configuration - all CSV files are in the same directory as the script
 BASE_PATH = Path(__file__).resolve().parent
 
