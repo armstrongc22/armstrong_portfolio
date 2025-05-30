@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
 import os
-
+from pathlib import Path
 # Define the path to your CSV file
 HERE = Path(__file__).resolve().parent
 DATA_DIR = HERE / "data"
