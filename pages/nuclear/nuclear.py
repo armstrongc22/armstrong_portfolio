@@ -1,17 +1,10 @@
-# nuclear/nuclear.py
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
-from pathlib import Path
 
-
-BASE_PATH = Path(__file__).resolve().parent
-HERE = Path(__file__).resolve().parent
-DATA_DIR = HERE / "data"
-NUCLEAR = DATA_DIR / "wn_all_countries_reactors.csv"
 # Country coordinates for mapping (you can expand this based on your data)
 COUNTRY_COORDS = {
     'United States': {'lat': 39.8283, 'lon': -98.5795},
@@ -305,13 +298,16 @@ def main():
     # Title
     st.markdown('<h1 class="main-header">🌍 GLOBAL NUCLEAR ATLAS</h1>', unsafe_allow_html=True)
 
-    # Load your data here - replace with your actual CSV file
-    # For demo purposes, I'll create sample data based on your structure
-
-    df = pd.DataFrame(NUCLEAR)
-
-    # You can replace the above with:
-    # df = pd.read_csv('your_reactor_data.csv')
+    # Load your actual CSV data
+    try:
+        df = pd.read_csv(NUCLEAR)
+    except FileNotFoundError:
+        st.error(f"Data file not found at: {NUCLEAR}")
+        st.info("Please ensure the CSV file exists in the correct location.")
+        return
+    except Exception as e:
+        st.error(f"Error loading data: {str(e)}")
+        return
 
     # Main heat map
     st.plotly_chart(create_nuclear_heatmap(df), use_container_width=True, theme=None)
@@ -329,7 +325,7 @@ def main():
         """, unsafe_allow_html=True)
 
     with col2:
-        total_capacity = df['Capacity (MWe)'].sum() / 1000
+        total_capacity = pd.to_numeric(df['Capacity (MWe)'], errors='coerce').sum() / 1000
         st.markdown(f"""
         <div class="metric-container">
             <h3 style="color: #00ff41; text-align: center;">{total_capacity:.1f} GW</h3>
@@ -347,7 +343,7 @@ def main():
         """, unsafe_allow_html=True)
 
     with col4:
-        avg_load_factor = df['Load Factor (2023) (%)'].mean()
+        avg_load_factor = pd.to_numeric(df['Load Factor (2023) (%)'], errors='coerce').mean()
         st.markdown(f"""
         <div class="metric-container">
             <h3 style="color: #00ff41; text-align: center;">{avg_load_factor:.1f}%</h3>
