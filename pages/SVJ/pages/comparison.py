@@ -34,6 +34,8 @@ def clean_sheet(path: Path, segment: str = "") -> pd.DataFrame:
         df = pd.read_csv(path)
         st.write(f"DEBUG: Original dataset shape: {df.shape}")
         st.write(f"DEBUG: Original columns: {df.columns.tolist()}")
+        st.write(f"DEBUG: First few rows:")
+        st.dataframe(df.head())
 
         # Special handling for centers_advanced - drop first column
         if "center" in segment.lower() and "advanced" in segment.lower():
@@ -52,13 +54,30 @@ def clean_sheet(path: Path, segment: str = "") -> pd.DataFrame:
                 player_col = col
                 break
 
+        # If no obvious player column found, check all columns for one that contains actual names
+        if not player_col:
+            st.write("DEBUG: No obvious player column found, checking all columns...")
+            for col in df.columns:
+                sample_values = df[col].dropna().astype(str).head(10).tolist()
+                st.write(f"DEBUG: Column '{col}' sample values: {sample_values}")
+
+                # Check if this column contains names (not just numbers)
+                non_numeric_count = sum(
+                    1 for val in sample_values if not str(val).replace('.', '').replace('-', '').isdigit())
+                if non_numeric_count > len(sample_values) * 0.5:  # More than 50% non-numeric
+                    player_col = col
+                    st.write(f"DEBUG: Using '{col}' as player column (has {non_numeric_count} non-numeric values)")
+                    break
+
         if player_col and player_col != 'Player':
             df = df.rename(columns={player_col: 'Player'})
         elif not player_col and len(df.columns) > 0:
-            # Assume first column is player name
+            # Last resort: assume first column is player name
             df = df.rename(columns={df.columns[0]: 'Player'})
+            st.write(f"DEBUG: Using first column '{df.columns[0]}' as Player column")
 
         st.write(f"DEBUG: After player column handling: {df.shape}")
+        st.write(f"DEBUG: Player column sample values: {df['Player'].head(10).tolist()}")
 
         # Clean player names - LESS AGGRESSIVE CLEANING
         if 'Player' in df.columns:
@@ -71,9 +90,7 @@ def clean_sheet(path: Path, segment: str = "") -> pd.DataFrame:
             df = df[df['Player'] != 'nan']
             df = df[df['Player'] != 'NaN']
 
-            # REMOVED: The regex that removes numbers - this was too aggressive
-            # df = df[~df['Player'].str.match(r'^\d+\.?\d*$', na=False)]
-
+            # Don't remove numeric values yet - let's see what we have first
             st.write(f"DEBUG: After basic player cleaning - from {original_size} to {len(df)} rows")
 
         # Handle GP column specifically
