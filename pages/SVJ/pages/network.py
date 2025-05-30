@@ -162,6 +162,9 @@ def create_clean_visualization(G, center_player, shot_type):
 
 # ─── Streamlit UI ───────────────────────────────────────────────────────────────
 def main():
+    BASE = Path(__file__).resolve().parent  # pages/SVJ/pages
+    img_path = BASE / "output.png"
+    st.image(str(img_path), use_container_width=True)
     st.set_page_config(page_title="Rockets Assist Network", layout="wide")
 
     st.title("🚀 Houston Rockets Assist Network")
