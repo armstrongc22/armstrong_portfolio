@@ -205,11 +205,6 @@ def main():
         st.write(f"Available files: {list(file_mapping.keys())}")
         return
 
-    # Display basic info about the dataset
-    st.write(f"Dataset shape: {df.shape}")
-    if 'Player' in df.columns:
-        st.write(f"Number of players: {len(df)}")
-
     # Find the player in the dataset
     found_player, player_data = find_player_in_dataframe(df, player)
 
@@ -228,6 +223,7 @@ def main():
     if not is_basic_segment and 'GP' in df.columns:
         original_size = len(df)
         # CHANGED: Lower GP threshold and handle missing GP values better
+        # CHANGED: Lower GP hreshold and handle missing GP values better
         df_filtered = df[(df['GP'] >= 20) | (df['Player'] == player) | (df['GP'].isna())]
         if len(df_filtered) > 5:  # Only apply filter if we still have reasonable data
             df = df_filtered
