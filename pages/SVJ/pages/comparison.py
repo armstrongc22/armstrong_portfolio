@@ -193,7 +193,28 @@ def main():
     # Segment selection
     choices = segs[player]
     segment = st.selectbox("Choose segment", choices)
+    # Find the appropriate CSV file for the selected segment
+    segment_files = segment_file_mapping.get(segment, [])
+    df = None
 
+    for possible_file in segment_files:
+        if possible_file in file_mapping:
+            file_path = file_mapping[possible_file]
+            df = clean_sheet(file_path, segment)
+            if not df.empty:
+                st.success(f"Loaded data from: {file_path.name}")
+                break
+
+    if df is None or df.empty:
+        st.error(f"Could not find or load data for segment: {segment}")
+        st.write(f"Looking for files: {segment_files}")
+        st.write(f"Available files: {list(file_mapping.keys())}")
+        return
+
+    # Display basic info about the dataset
+    st.write(f"Dataset shape: {df.shape}")
+    if 'Player' in df.columns:
+        st.write(f"Number of players: {len(df)}")
 
     # Find the player in the dataset
     found_player, player_data = find_player_in_dataframe(df, player)
