@@ -115,31 +115,17 @@ def create_professional_charts():
 def main():
     st.title("📊 Euphoria CSV Dashboard (Desktop Only)")
 
-    tabs = st.tabs(["1️⃣ Disk & Heads", "2️⃣ KPIs", "3️⃣ Yearly Map", "4️⃣ Segments"])
+    tabs = st.tabs(["2️⃣ KPIs", "3️⃣ Yearly Map", "4️⃣ Segments"])
 
-    # Tab 1: show exactly what files we see
-    with tabs[0]:
-        st.header("Files under `data_csvs/`")
-        for p in list_files(DATA_DIR, "*.csv"):
-            st.write(f"- {p.name} ({p.stat().st_size // 1024} KB)")
-        st.write("Files under `data_csvs/trophy/`")
-        for p in list_files(TROPHY_DIR, "*.csv"):
-            st.write(f"- {p.name} ({p.stat().st_size // 1024} KB)")
-
-        st.markdown("---")
-        st.header("Preview first 3 rows of each")
-        for fn in ["watch", "streams", "purchase_events", "partners", "games", "merch"]:
-            p = DATA_DIR / f"{fn}.csv"
-            st.subheader(p.name)
-            st.dataframe(try_read(p).head(3))
-
-        st.subheader("trophy/*.csv")
-        for p in list_files(TROPHY_DIR, "trophy_customers_part*.csv"):
-            st.write(p.name)
-            st.dataframe(try_read(p).head(3))
-
+    st.markdown("""
+    **Euphoria** is a massive fictional fantasy IP created as the backbone for a marketing project using synthetic data.
+    The company produces physical copies of their manga, video games, and a variety of merchandise. The video games have created an online community of streamers and customers who religiously tune in. 
+    This project analyzes the KPI's for the company, visualizes the countries that watch the Euphoria streams, and identifies customer segments ripe for optimization for the company's most expensive product.
+    The data for all of this was produced synthetically in Python. A pipeline was created from the local server to Confluent Kafka, and then BigQuery where it was stored and structured into a relational database.
+    That database was queried using SQL syntax and the results displayed using Dash and Streamlit applications. 
+    """"")
     # Tab 2: Enhanced KPIs with Professional Charts
-    with tabs[1]:
+    with tabs[0]:
         st.header("📈 Key Performance Indicators")
         colors = create_professional_charts()
 
@@ -277,7 +263,7 @@ def main():
                 st.metric("Countries Reached", f"{unique_countries}")
 
     # Tab 3: Yearly Map
-    with tabs[2]:
+    with tabs[1]:
         st.header("🗺️ Yearly Watch Choropleth")
         watch = try_read(DATA_DIR / "watch.csv")
         if watch.empty:
@@ -304,7 +290,7 @@ def main():
                 st.plotly_chart(fig, use_container_width=True)
 
     # Tab 4: Enhanced Trophy Segments with Insights
-    with tabs[3]:
+    with tabs[2]:
         st.title("🏆 Euphoria Trophy Purchasers: MCA + Segments")
         df = load_trophy_customers()
         st.write(f"Loaded **{len(df):,}** trophy customers")
