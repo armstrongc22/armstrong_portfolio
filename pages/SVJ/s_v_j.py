@@ -5,7 +5,7 @@ from pages import (
     logistic_model,
     point_distribution,
     shot_distribution,
-    leaderboard, comparison
+    leaderboard, comparison,network
 )
 
 st.set_page_config(page_title="Rockets Analytics Hub", layout="wide")
@@ -21,6 +21,7 @@ PAGES = {
     "Player Stats": player_stats.main,
     "Player Stats 2": comparison.main, 
     "Logistic Model": logistic_model.main,
+    "Assist Network": network.main,
     "Point Distribution": point_distribution.main,
     "Shot Distribution": shot_distribution.main,
     "Leaderboard": leaderboard.main,
