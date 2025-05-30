@@ -8,6 +8,7 @@ google-cloud-bigquery-storage>=2.18.1
 h3
 matplotlib
 nba_api
+networkx
 numpy
 pandas
 plotly
