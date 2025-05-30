@@ -1,34 +1,78 @@
+# nuclear/nuclear.py
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import numpy as np
 
-# Sample data based on what I can see from your screenshot
-reactor_data = {
-    'Country': ['Argentina', 'Armenia', 'Belgium', 'Brazil', 'Bulgaria', 'Canada', 'China', 'Czech Republic', 'Finland',
-                'France', 'Germany', 'Hungary', 'India', 'Iran', 'Japan', 'Mexico', 'Netherlands', 'Pakistan',
-                'Romania', 'Russia', 'Slovakia', 'Slovenia', 'South Africa', 'South Korea', 'Spain', 'Sweden',
-                'Switzerland', 'Ukraine', 'United Kingdom', 'United States'],
-    'Reactor_Count': [3, 1, 7, 2, 2, 19, 55, 6, 4, 56, 3, 4, 23, 1, 33, 2, 1, 6, 2, 38, 4, 1, 2, 25, 7, 6, 4, 15, 9,
-                      93],
-    'iso_alpha': ['ARG', 'ARM', 'BEL', 'BRA', 'BGR', 'CAN', 'CHN', 'CZE', 'FIN', 'FRA', 'DEU', 'HUN', 'IND', 'IRN',
-                  'JPN', 'MEX', 'NLD', 'PAK', 'ROU', 'RUS', 'SVK', 'SVN', 'ZAF', 'KOR', 'ESP', 'SWE', 'CHE', 'UKR',
-                  'GBR', 'USA']
-}
+HERE = Path(__file__).resolve().parent
+DATA_DIR = HERE / "data"
+NUCLEAR = DATA_DIR / "wn_all_countries_reactors.csv"
+
+# MUST be the very first Streamlit command
+st.set_page_config(
+    page_title="Nuclear Energy Dashboard",
+    layout="wide",
+)
+
+# Import scripts AFTER set_page_config
+from scripts import growing, performance, pipeline, capacity
 
 
-def create_nuclear_choropleth():
-    """Create a choropleth map showing nuclear reactor counts by country"""
+def create_nuclear_choropleth(df_reactors):
+    """
+    Create a simple choropleth map showing nuclear reactor counts by country.
+    Args:
+        df_reactors: DataFrame with 'Country' and reactor count columns
+    Returns:
+        plotly.graph_objects.Figure: Choropleth map
+    """
+    # Count reactors by country
+    reactor_counts = df_reactors.groupby('Country').size().reset_index(name='Reactor_Count')
 
-    # Create DataFrame
-    df = pd.DataFrame(reactor_data)
+    # Country to ISO code mapping (add more as needed)
+    country_iso_map = {
+        'Argentina': 'ARG',
+        'Armenia': 'ARM',
+        'Belgium': 'BEL',
+        'Brazil': 'BRA',
+        'Bulgaria': 'BGR',
+        'Canada': 'CAN',
+        'China': 'CHN',
+        'Czech Republic': 'CZE',
+        'Finland': 'FIN',
+        'France': 'FRA',
+        'Germany': 'DEU',
+        'Hungary': 'HUN',
+        'India': 'IND',
+        'Iran': 'IRN',
+        'Japan': 'JPN',
+        'Mexico': 'MEX',
+        'Netherlands': 'NLD',
+        'Pakistan': 'PAK',
+        'Romania': 'ROU',
+        'Russia': 'RUS',
+        'Slovakia': 'SVK',
+        'Slovenia': 'SVN',
+        'South Africa': 'ZAF',
+        'South Korea': 'KOR',
+        'Spain': 'ESP',
+        'Sweden': 'SWE',
+        'Switzerland': 'CHE',
+        'Ukraine': 'UKR',
+        'United Kingdom': 'GBR',
+        'United States': 'USA',
+        'USA': 'USA'
+    }
 
-    # Create the choropleth map
+    # Add ISO codes
+    reactor_counts['iso_alpha'] = reactor_counts['Country'].map(country_iso_map)
+
+    # Remove countries without ISO codes
+    reactor_counts = reactor_counts.dropna(subset=['iso_alpha'])
+
+    # Create choropleth map
     fig = go.Figure(data=go.Choropleth(
-        locations=df['iso_alpha'],
-        z=df['Reactor_Count'],
+        locations=reactor_counts['iso_alpha'],
+        z=reactor_counts['Reactor_Count'],
         locationmode='ISO-3',
         colorscale=[
             [0, '#FFFFFF'],  # White for 0 reactors
@@ -43,26 +87,22 @@ def create_nuclear_choropleth():
         marker_line_color='darkgray',
         marker_line_width=0.5,
         colorbar=dict(
-            title="Number of Nuclear Reactors",
-            titlefont=dict(color='white', size=14),
-            tickfont=dict(color='white', size=12),
-            bgcolor='rgba(0,0,0,0.5)',
+            title="Nuclear Reactors",
+            titlefont=dict(color='white', size=12),
+            tickfont=dict(color='white', size=10),
+            bgcolor='rgba(0,0,0,0.8)',
             bordercolor='white',
             borderwidth=1,
-            x=1.02
+            len=0.7,
+            thickness=15
         ),
-        hovertemplate='<b>%{text}</b><br>Nuclear Reactors: %{z}<extra></extra>',
-        text=df['Country'],
+        hovertemplate='<b>%{text}</b><br>Reactors: %{z}<extra></extra>',
+        text=reactor_counts['Country'],
         showscale=True
     ))
 
-    # Update layout for black background theme
+    # Update layout for black map background
     fig.update_layout(
-        title=dict(
-            text='Global Nuclear Reactor Distribution',
-            font=dict(color='white', size=20),
-            x=0.5
-        ),
         geo=dict(
             showframe=False,
             showcoastlines=True,
@@ -75,164 +115,66 @@ def create_nuclear_choropleth():
             lakecolor='black',
             showrivers=False
         ),
-        paper_bgcolor='black',
-        plot_bgcolor='black',
-        font=dict(color='white'),
-        width=1200,
-        height=700
-    )
-
-    return fig
-
-
-def create_reactor_stats_table(df):
-    """Create a summary statistics table"""
-
-    # Top 10 countries by reactor count
-    top_countries = df.nlargest(10, 'Reactor_Count')
-
-    fig = go.Figure(data=[go.Table(
-        header=dict(
-            values=['Rank', 'Country', 'Number of Reactors'],
-            fill_color='#00FF00',
-            font=dict(color='black', size=14),
-            align='center'
-        ),
-        cells=dict(
-            values=[
-                list(range(1, len(top_countries) + 1)),
-                top_countries['Country'].tolist(),
-                top_countries['Reactor_Count'].tolist()
-            ],
-            fill_color='rgba(0, 255, 0, 0.1)',
-            font=dict(color='white', size=12),
-            align='center'
-        )
-    )])
-
-    fig.update_layout(
-        title=dict(
-            text='Top 10 Countries by Nuclear Reactor Count',
-            font=dict(color='white', size=16),
-            x=0.5
-        ),
-        paper_bgcolor='black',
-        plot_bgcolor='black',
-        font=dict(color='white'),
+        paper_bgcolor='white',  # Keep page background white
+        plot_bgcolor='white',
+        margin=dict(l=0, r=0, t=0, b=0),
         height=400
     )
 
     return fig
 
 
-def main():
-    # Set page config with white background
-    st.set_page_config(
-        page_title="Nuclear Reactor Global Distribution",
-        page_icon="⚛️",
-        layout="wide",
-        initial_sidebar_state="expanded"
+# Sidebar navigation
+st.sidebar.title("Navigation")
+page = st.sidebar.radio(
+    "Go to",
+    ("Home", "Growth Atlas", "Supply-Chain Risk", "Performance Benchmark/Opportunity", "Deal Pipeline")
+)
+
+if page == "Home":
+    st.title("🏠 Nuclear Energy Insights")
+    st.markdown(
+        """
+        Welcome to the **Nuclear Energy Dashboard**.  
+        Use the menu on the left to explore:
+        1. **Growth Atlas** – Identify the fastest-growing nuclear markets.  
+        2. **Supply-Chain Risk** – Uranium feed production vs reactor demand. 
+        3. **Performance Benchmark/Opportunity** - Where increase capacity leads to largest service opportunities. 
+        4. **Deal Pipeline** – Live reactor financings with sovereign & ECA overlays.  
+        """
     )
 
-    # Custom CSS to ensure white background and proper styling
-    st.markdown("""
-    <style>
-    .main {
-        background-color: white;
-    }
-    .stApp {
-        background-color: white;
-    }
-    .block-container {
-        background-color: white;
-        padding-top: 2rem;
-    }
-    h1, h2, h3 {
-        color: black !important;
-    }
-    .stMarkdown {
-        color: black;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    # Try to load reactor data and create choropleth map
+    try:
+        # You'll need to adjust this path to match your actual data file
+        # This assumes you have a CSV file with reactor data including a 'Country' column
+        df_reactors = pd.read_csv(NUCLEAR)  # Adjust path as needed
 
-    # Title and description
-    st.title("⚛️ Global Nuclear Reactor Distribution")
-    st.markdown("**Interactive choropleth map showing the distribution of nuclear reactors worldwide**")
+        st.subheader("Global Nuclear Reactor Distribution")
+        fig = create_nuclear_choropleth(df_reactors)
+        st.plotly_chart(fig, use_container_width=True)
 
-    # Create DataFrame
-    df = pd.DataFrame(reactor_data)
+    except FileNotFoundError:
+        st.warning("Reactor data file not found. Please ensure 'data/reactors.csv' exists with a 'Country' column.")
+        # Fallback to the original image
+        st.image(
+            "https://www.world-nuclear.org/getmedia/0a212cba-1a5f-4de6-9d7a-5efb9728f691/World-Map-of-Nuclear-Power-Reactors.png",
+            caption="Global Nuclear Reactor Map", use_column_width=True)
+    except Exception as e:
+        st.error(f"Error loading reactor data: {e}")
+        # Fallback to the original image
+        st.image(
+            "https://www.world-nuclear.org/getmedia/0a212cba-1a5f-4de6-9d7a-5efb9728f691/World-Map-of-Nuclear-Power-Reactors.png",
+            caption="Global Nuclear Reactor Map", use_column_width=True)
 
-    # Sidebar with statistics
-    st.sidebar.header("📊 Global Statistics")
-    st.sidebar.metric("Total Countries with Nuclear Power", len(df))
-    st.sidebar.metric("Total Nuclear Reactors", df['Reactor_Count'].sum())
-    st.sidebar.metric("Average Reactors per Country", f"{df['Reactor_Count'].mean():.1f}")
-    st.sidebar.metric("Median Reactors per Country", df['Reactor_Count'].median())
+elif page == "Growth Atlas":
+    growing.main()
 
-    # Top country
-    top_country = df.loc[df['Reactor_Count'].idxmax()]
-    st.sidebar.metric("Country with Most Reactors", f"{top_country['Country']} ({top_country['Reactor_Count']})")
+elif page == "Supply-Chain Risk":
+    capacity.main()
 
-    # Main content area
-    col1, col2 = st.columns([3, 1])
+elif page == "Performance Benchmark/Opportunity":
+    performance.main()
 
-    with col1:
-        # Create and display the choropleth map
-        fig_map = create_nuclear_choropleth()
-        st.plotly_chart(fig_map, use_container_width=True)
-
-        # Display the data table
-        st.subheader("📋 Reactor Data by Country")
-        st.dataframe(
-            df.sort_values('Reactor_Count', ascending=False),
-            use_container_width=True,
-            hide_index=True
-        )
-
-    with col2:
-        # Key insights
-        st.subheader("🔑 Key Insights")
-        st.markdown(f"""
-        - **{df['Reactor_Count'].sum()}** total nuclear reactors worldwide
-        - **{len(df)}** countries operate nuclear power plants
-        - The **{top_country['Country']}** leads with **{top_country['Reactor_Count']}** reactors
-        - Countries with 20+ reactors: **{len(df[df['Reactor_Count'] >= 20])}**
-        - Average reactors per country: **{df['Reactor_Count'].mean():.1f}**
-        """)
-
-        # Distribution chart
-        st.subheader("📈 Distribution Analysis")
-
-        # Histogram of reactor counts
-        fig_hist = px.histogram(
-            df,
-            x='Reactor_Count',
-            nbins=10,
-            title='Distribution of Reactor Counts',
-            color_discrete_sequence=['#00FF00']
-        )
-        fig_hist.update_layout(
-            paper_bgcolor='white',
-            plot_bgcolor='white',
-            font=dict(color='black'),
-            height=300
-        )
-        st.plotly_chart(fig_hist, use_container_width=True)
-
-    # Bottom section with top countries table
-    st.subheader("🏆 Top Countries by Nuclear Reactor Count")
-    fig_table = create_reactor_stats_table(df)
-    st.plotly_chart(fig_table, use_container_width=True)
-
-    # Additional information
-    st.info("""
-    **About this visualization:**
-    This choropleth map displays the global distribution of nuclear reactors using a neon green to white color scale. 
-    Countries with more reactors appear in brighter green, while countries with fewer reactors appear in lighter shades.
-    The data includes operational nuclear power reactors as of 2024.
-    """)
-
-
-if __name__ == "__main__":
-    main()
+elif page == "Deal Pipeline":
+    pipeline.main()
