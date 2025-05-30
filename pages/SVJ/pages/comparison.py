@@ -213,16 +213,6 @@ def main():
         st.error(f"Could not load data for {segment}. The file exists but contains no valid data.")
         return
 
-    # Display basic info about the dataset
-    st.write(f"Dataset shape: {df.shape}")
-    if 'Player' in df.columns:
-        st.write(f"Number of players: {len(df)}")
-
-    # Show all players that might match our target
-    if 'Player' in df.columns:
-        st.write("### All players in dataset (first 20):")
-        st.write(df['Player'].head(20).tolist())
-
     # Find the player in the dataset
     found_player, player_data = find_player_in_dataframe(df, player)
 
