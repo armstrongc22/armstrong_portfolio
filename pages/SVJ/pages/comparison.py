@@ -37,18 +37,31 @@ def clean_sheet(path: Path, segment: str = "") -> pd.DataFrame:
         st.write(f"DEBUG: First few rows:")
         st.dataframe(df.head())
 
-        # Special handling for datasets that need column shifting
-        needs_column_shift = (
+        # Special handling for datasets that need column header shifting
+        needs_header_shift = (
                 ("guard" in segment.lower() and "basic" in segment.lower()) or
                 ("guard" in segment.lower() and "advanced" in segment.lower()) or
                 ("center" in segment.lower() and "basic" in segment.lower())
         )
 
-        if needs_column_shift:
-            st.write(f"DEBUG: Applying column shift fix for {segment}")
-            # Drop the first column (which contains row indices)
-            df = df.drop(df.columns[0], axis=1)
-            st.write(f"DEBUG: After dropping first column: {df.shape}")
+        if needs_header_shift:
+            st.write(f"DEBUG: Applying column header shift fix for {segment}")
+            st.write(f"DEBUG: Original columns: {df.columns.tolist()}")
+
+            # Shift column headers one position to the right
+            # First, get the current column names
+            original_columns = df.columns.tolist()
+
+            # Create new column names by shifting right (first column becomes index/unnamed)
+            new_columns = ['Index'] + original_columns[:-1]  # Drop the last column name, add 'Index' at start
+
+            # Apply the new column names
+            df.columns = new_columns
+
+            # Now drop the Index column (first column) which contains row indices
+            df = df.drop('Index', axis=1)
+
+            st.write(f"DEBUG: After header shift and index removal: {df.shape}")
             st.write(f"DEBUG: New columns: {df.columns.tolist()}")
 
         # Special handling for centers_advanced - drop first column (this was already in your code)
