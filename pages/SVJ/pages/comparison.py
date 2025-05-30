@@ -201,10 +201,6 @@ def main():
             segment_file = file_mapping[possible_name]
             break
 
-    if not segment_file:
-        st.error(f"Could not find file for {segment}. Available files: {list(file_mapping.keys())}")
-        return
-
     # Load the chosen dataset
     with st.spinner(f"Loading {segment} data from {segment_file.name}..."):
         df = clean_sheet(segment_file, segment)
