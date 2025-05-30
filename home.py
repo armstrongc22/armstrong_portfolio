@@ -46,11 +46,6 @@ projects = [
         "thumb": IMG_DIR / "neymar.png",
         "url": "https://armstrongportfolio-febhp4fxhsde5csvsgzrbx.streamlit.app/"
     },
-    {
-        "name": "Cannabis Market Research",
-        "thumb": IMG_DIR / "canna.png",
-        "url": "https://armstrongportfolio-rj6cipckjilm3vdbacdvrp.streamlit.app"
-    },
 ]
 
 # ─── Render cards in a 2×2 grid ─────────────────────────────────────────────────
