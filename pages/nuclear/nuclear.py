@@ -89,7 +89,6 @@ def create_nuclear_choropleth(df_reactors):
         marker_line_width=0.5,
         colorbar=dict(
             title="Nuclear Reactors",
-            titlefont=dict(color='white', size=12),
             tickfont=dict(color='white', size=10),
             bgcolor='rgba(0,0,0,0.8)',
             bordercolor='white',
