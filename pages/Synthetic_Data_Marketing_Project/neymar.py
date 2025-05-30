@@ -113,7 +113,7 @@ def create_professional_charts():
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 def main():
-    st.title("📊 Euphoria CSV Dashboard (Desktop Only)")
+    st.title("Euphoria IP Synthetic Data Project")
 
     tabs = st.tabs(["Home", "KPIs", "Yearly Map", "Segments"])
 
@@ -294,6 +294,10 @@ def main():
     # Tab 4: Enhanced Trophy Segments with Insights
     with tabs[3]:
         st.title("🏆 Euphoria Trophy Purchasers: MCA + Segments")
+        st.write("""The Mahiman Trophy is a given to the winner of the annual Caleum Furor gladiator tournament. The golden statue is encrusted with countless jewels and represents the highest individual honor a warrior of Euphoria can achieve.
+                 The authentic replica is sold on the Euphoria website for $15,000, the highest price point for any product on the site. Using Multiple Correspondence Analysis and KMeans, we'll be looking to identify defining characteristics of this customer segment. 
+                 Through this analysis we hope to find clearly defined groups that we can market to more effectively, and increase sales of this lucrative product.
+                 """)
         df = load_trophy_customers()
         st.write(f"Loaded **{len(df):,}** trophy customers")
         st.markdown("---")
