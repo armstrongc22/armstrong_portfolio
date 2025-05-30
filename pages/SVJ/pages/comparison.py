@@ -163,12 +163,6 @@ def main():
     # Get available files
     file_mapping = get_available_files()
 
-    # Debug section - ALWAYS SHOW for troubleshooting
-    st.write("### Debug Info: Available CSV Files")
-    st.write(f"Base path: {BASE_PATH}")
-    st.write(f"Available files: {list(file_mapping.keys())}")
-    st.write("---")
-
     # Player selection
     player = st.selectbox("Choose player", ["Jalen Green", "Alperen Sengun"])
 
