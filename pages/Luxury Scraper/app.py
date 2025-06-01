@@ -156,11 +156,9 @@ with col1:
                             market_value = run_async(ebay_scraper.get_market_value(item['model']))
                             if market_value:
                                 item['market_value'] = market_value
-                                item['is_good_deal'] = ebay_scraper.is_good_deal(
-                                    item['price'],
-                                    market_value,
-                                    threshold / 100
-                                )
+                                # Calculate if it's a good deal - price should be BELOW market value by threshold %
+                                savings_percentage = ((market_value - item['price']) / market_value * 100)
+                                item['is_good_deal'] = savings_percentage >= threshold
                                 
                                 # Send email for good deals if enabled
                                 if enable_notifications and item['is_good_deal']:
@@ -213,10 +211,10 @@ with col1:
                                 if item.get('market_value'):
                                     st.write(f"📊 Market Value: ${item['market_value']:,.2f}")
                                     savings = ((item['market_value'] - item['price']) / item['market_value'] * 100)
-                                    if item.get('is_good_deal'):
+                                    if savings > 0:  # Only show as a good deal if price is below market value
                                         st.success(f"🔥 Good Deal! Save {savings:.1f}%")
                                     else:
-                                        st.warning(f"Regular Price ({savings:.1f}% difference)")
+                                        st.warning(f"Above Market Price ({abs(savings):.1f}% higher)")
                                 
                                 st.write(f"✨ Condition: {item['condition']}")
                                 st.write(f"👤 Seller: {item['seller']}")
