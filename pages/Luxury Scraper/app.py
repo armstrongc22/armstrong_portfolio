@@ -118,7 +118,7 @@ with st.sidebar:
         "Category",
         ["watches", "art (coming soon)", "jewelry (coming soon)", "clothes (coming soon)"],
         index=0,
-        disabled=lambda x: x != "watches"
+        disabled=True  # Simply disable it since we only support watches for now
     )
     
     threshold = st.slider(
