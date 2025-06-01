@@ -1,6 +1,5 @@
 import streamlit as st
 import asyncio
-import nest_asyncio
 import plotly.graph_objects as go
 from datetime import datetime
 import pandas as pd
@@ -9,9 +8,6 @@ from services.email_service import EmailService
 from models.database import Item, MarketValue, PriceHistory, engine, SessionLocal
 import base64
 from sqlalchemy.orm import Session
-
-# Initialize nest_asyncio for handling async operations in Streamlit
-nest_asyncio.apply()
 
 # Page configuration
 st.set_page_config(
@@ -93,6 +89,15 @@ ebay_scraper = EbayScraper()
 if 'search_history' not in st.session_state:
     st.session_state.search_history = []
 
+# Create a new event loop for async operations
+def run_async(coro):
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop.run_until_complete(coro)
+
 # Title and description
 st.title("✨ Luxury Item Price Tracker")
 st.markdown("""
@@ -140,7 +145,7 @@ with col1:
         else:
             with st.spinner("Searching for deals..."):
                 # Run the scraper
-                items = asyncio.run(ebay_scraper.scrape(search_term))
+                items = run_async(ebay_scraper.scrape(search_term))
                 
                 if not items:
                     st.warning("No items found. Try a different search term.")
@@ -148,7 +153,7 @@ with col1:
                     # Process items and get market values
                     for item in items:
                         if item.get('model'):
-                            market_value = asyncio.run(ebay_scraper.get_market_value(item['model']))
+                            market_value = run_async(ebay_scraper.get_market_value(item['model']))
                             if market_value:
                                 item['market_value'] = market_value
                                 item['is_good_deal'] = ebay_scraper.is_good_deal(
@@ -159,7 +164,7 @@ with col1:
                                 
                                 # Send email for good deals if enabled
                                 if enable_notifications and item['is_good_deal']:
-                                    asyncio.run(email_service.send_deal_alert(item))
+                                    run_async(email_service.send_deal_alert(item))
 
                     # Store results in database
                     db = SessionLocal()
@@ -193,39 +198,34 @@ with col1:
                     if good_deals:
                         st.success(f"Found {len(good_deals)} good deals!")
 
-                    # Create a DataFrame for display
-                    df = pd.DataFrame(items)
-                    if not df.empty:
-                        df['savings'] = ((df['market_value'] - df['price']) / df['market_value'] * 100).round(1)
-                        
-                        # Display items in a modern card layout
-                        for item in items:
-                            with st.container():
-                                col_img, col_details = st.columns([1, 2])
+                    # Display items in a modern card layout
+                    for item in items:
+                        with st.container():
+                            col_img, col_details = st.columns([1, 2])
+                            
+                            with col_img:
+                                if item['image_url']:
+                                    st.image(item['image_url'], use_column_width=True)
+                            
+                            with col_details:
+                                st.subheader(item['title'])
+                                st.write(f"💰 Price: ${item['price']:,.2f}")
+                                if item.get('market_value'):
+                                    st.write(f"📊 Market Value: ${item['market_value']:,.2f}")
+                                    savings = ((item['market_value'] - item['price']) / item['market_value'] * 100)
+                                    if item.get('is_good_deal'):
+                                        st.success(f"🔥 Good Deal! Save {savings:.1f}%")
+                                    else:
+                                        st.warning(f"Regular Price ({savings:.1f}% difference)")
                                 
-                                with col_img:
-                                    if item['image_url']:
-                                        st.image(item['image_url'], use_column_width=True)
+                                st.write(f"✨ Condition: {item['condition']}")
+                                st.write(f"👤 Seller: {item['seller']}")
+                                st.write(f"🏢 Platform: {item['platform']}")
                                 
-                                with col_details:
-                                    st.subheader(item['title'])
-                                    st.write(f"💰 Price: ${item['price']:,.2f}")
-                                    if item.get('market_value'):
-                                        st.write(f"📊 Market Value: ${item['market_value']:,.2f}")
-                                        savings = ((item['market_value'] - item['price']) / item['market_value'] * 100)
-                                        if item.get('is_good_deal'):
-                                            st.success(f"🔥 Good Deal! Save {savings:.1f}%")
-                                        else:
-                                            st.warning(f"Regular Price ({savings:.1f}% difference)")
-                                    
-                                    st.write(f"✨ Condition: {item['condition']}")
-                                    st.write(f"👤 Seller: {item['seller']}")
-                                    st.write(f"🏢 Platform: {item['platform']}")
-                                    
-                                    if st.button(f"View Item →", key=item['url']):
-                                        st.markdown(f"[Open in new tab]({item['url']})")
-                                
-                                st.markdown("---")
+                                if st.button(f"View Item →", key=item['url']):
+                                    st.markdown(f"[Open in new tab]({item['url']})")
+                            
+                            st.markdown("---")
 
 with col2:
     if st.session_state.search_history:
