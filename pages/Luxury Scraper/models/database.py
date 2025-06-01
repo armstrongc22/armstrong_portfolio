@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, sessionmaker
 from datetime import datetime
 
 Base = declarative_base()
@@ -47,6 +47,9 @@ class PriceHistory(Base):
 
 # Create database engine
 engine = create_engine('sqlite:///luxury_items.db')
+
+# Create SessionLocal class
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Create all tables
 Base.metadata.create_all(engine) 

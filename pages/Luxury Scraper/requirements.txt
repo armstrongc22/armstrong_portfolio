@@ -1,0 +1,10 @@
+streamlit
+beautifulsoup4
+requests
+pandas
+SQLAlchemy
+aiohttp
+yagmail
+plotly
+numpy
+matplotlib 
