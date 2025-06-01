@@ -1,5 +1,6 @@
 import streamlit as st
 import asyncio
+import nest_asyncio
 import plotly.graph_objects as go
 from datetime import datetime
 import pandas as pd
@@ -8,6 +9,9 @@ from services.email_service import EmailService
 from models.database import Item, MarketValue, PriceHistory, engine, SessionLocal
 import base64
 from sqlalchemy.orm import Session
+
+# Initialize nest_asyncio for handling async operations in Streamlit
+nest_asyncio.apply()
 
 # Page configuration
 st.set_page_config(
