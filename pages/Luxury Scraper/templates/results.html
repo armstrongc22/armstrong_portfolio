@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Results - Luxury Item Price Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #D4AF37;
+            --light-gold: #F4E5B5;
+            --dark-gold: #996515;
+            --white: #FFFFFF;
+            --off-white: #F8F8F8;
+            --green: #4CAF50;
+            --red: #f44336;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--white);
+            color: #333;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--gold), var(--dark-gold));
+            color: var(--white);
+            padding: 2rem;
+            text-align: center;
+            font-family: 'Playfair Display', serif;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .search-info {
+            text-align: center;
+            margin: 1rem 0;
+            color: var(--dark-gold);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .item-card {
+            background: var(--white);
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.2s ease;
+            border: 1px solid var(--light-gold);
+        }
+
+        .item-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .item-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-bottom: 2px solid var(--light-gold);
+        }
+
+        .item-details {
+            padding: 1.5rem;
+        }
+
+        .item-title {
+            font-family: 'Playfair Display', serif;
+            color: var(--dark-gold);
+            margin: 0 0 1rem 0;
+            font-size: 1.2rem;
+        }
+
+        .price-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .current-price {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--dark-gold);
+        }
+
+        .market-value {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .deal-badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            color: var(--white);
+            font-weight: 500;
+            margin-bottom: 1rem;
+        }
+
+        .good-deal {
+            background-color: var(--green);
+        }
+
+        .no-deal {
+            background-color: var(--red);
+        }
+
+        .item-meta {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .view-button {
+            display: block;
+            background: linear-gradient(135deg, var(--gold), var(--dark-gold));
+            color: var(--white);
+            text-decoration: none;
+            padding: 0.75rem;
+            text-align: center;
+            border-radius: 5px;
+            margin-top: 1rem;
+            transition: transform 0.2s ease;
+        }
+
+        .view-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .back-button {
+            display: inline-block;
+            margin: 1rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--dark-gold);
+            color: var(--white);
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.2s ease;
+        }
+
+        .back-button:hover {
+            background-color: var(--gold);
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .container {
+                margin: 1rem auto;
+            }
+
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Search Results</h1>
+    </div>
+
+    <div class="container">
+        <a href="/" class="back-button">← Back to Search</a>
+        
+        <div class="search-info">
+            <h2>Results for "{{ search_term }}" in {{ category }}</h2>
+        </div>
+
+        <div class="results-grid">
+            {% for item in items %}
+            <div class="item-card">
+                <img src="{{ item.image_url }}" alt="{{ item.title }}" class="item-image">
+                <div class="item-details">
+                    <h3 class="item-title">{{ item.title }}</h3>
+                    
+                    <div class="price-info">
+                        <span class="current-price">${{ "%.2f"|format(item.price) }}</span>
+                        {% if item.market_value %}
+                        <span class="market-value">Market: ${{ "%.2f"|format(item.market_value) }}</span>
+                        {% endif %}
+                    </div>
+
+                    {% if item.is_good_deal %}
+                    <span class="deal-badge good-deal">Good Deal! Save {{ "%.1f"|format(((item.market_value - item.price) / item.market_value) * 100) }}%</span>
+                    {% elif item.market_value %}
+                    <span class="deal-badge no-deal">Regular Price</span>
+                    {% endif %}
+
+                    <div class="item-meta">
+                        <p><strong>Condition:</strong> {{ item.condition }}</p>
+                        <p><strong>Seller:</strong> {{ item.seller }}</p>
+                        <p><strong>Platform:</strong> {{ item.platform }}</p>
+                    </div>
+
+                    <a href="{{ item.url }}" target="_blank" class="view-button">View Item →</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html> 
